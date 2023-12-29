@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>dafnik.me ⚛ Dominik</title>
+
+  <link rel="shortcut icon" type="image/x-icon" href="images/favicon.ico">
+
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="description"
+        content="This is my personal website, here you can find passionate projects and awesome social media accounts."/>
+
+  <meta property="og:url" content="https://dafnik.me"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:title" content="dafnik.me ⚛ Dominik"/>
+  <meta property="og:description"
+        content="Find passionate projects and awesome social media accounts from me."/>
+  <meta property="og:image" content="https://dafnik.me/images/favicon.ico"/>
+
+  <style>
+      /* cyrillic-ext */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 200;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD2OwG_TA.woff2") format('woff2');
+          unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+      }
+
+      /* cyrillic */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 200;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD_OwG_TA.woff2") format('woff2');
+          unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+      }
+
+      /* latin-ext */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 200;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD1OwG_TA.woff2") format('woff2');
+          unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+
+      /* latin */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 200;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD7OwE.woff2") format('woff2');
+          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+      /* cyrillic-ext */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 300;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD2OwG_TA.woff2") format('woff2');
+          unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+      }
+
+      /* cyrillic */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 300;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD_OwG_TA.woff2") format('woff2');
+          unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+      }
+
+      /* latin-ext */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 300;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD1OwG_TA.woff2") format('woff2');
+          unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+
+      /* latin */
+      @font-face {
+          font-family: 'JetBrains Mono';
+          font-style: normal;
+          font-weight: 300;
+          font-display: swap;
+          src: local('Jetbrains Mono'), url("./fonts/tDbV2o-flEEny0FZhsfKu5WU4xD7OwE.woff2") format('woff2');
+          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+      /* latin-ext */
+      @font-face {
+          font-family: 'Space Grotesk';
+          font-style: normal;
+          font-weight: 500;
+          font-display: swap;
+          src: local('Space Grotesk'), url("./fonts/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7aUXsqPMBTTA.woff2") format('woff2');
+          unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+
+      /* latin */
+      @font-face {
+          font-family: 'Space Grotesk';
+          font-style: normal;
+          font-weight: 500;
+          font-display: swap;
+          src: local('Space Grotesk'), url("./fonts/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7aUXskPMA.woff2") format('woff2');
+          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+
+      body {
+          background-color: #000000;
+          color: white;
+          font-size: 1.4vh;
+          margin: 0;
+          padding: 0;
+      }
+
+      .container {
+          margin-top: 2rem;
+          margin-left: auto;
+          margin-right: auto;
+          max-width: 1424px;
+      }
+
+      /*noinspection ALL*/
+      .rainbow-text {
+          background: linear-gradient(to right, red, orange, yellow, green, cyan, blue, violet);
+          color: transparent;
+          background-clip: text;
+          /* Fuck you chrome! https://caniuse.com/?search=background-clip%3A%20webkit */
+          -webkit-background-clip: text;
+      }
+
+      .mobileBreak {
+          display: none;
+      }
+
+      #nameBig {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 5.4rem;
+          margin-right: 5px;
+          margin-left: 5px;
+      }
+
+      .nameSmall {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 2.4rem;
+      }
+
+      .nameMiddle {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 3.6rem;
+      }
+
+      #sideDescription {
+          font-family: 'JetBrains Mono', monospace;
+          font-weight: normal;
+          font-size: 1.6rem;
+      }
+
+      h3 {
+          font-family: 'Space Grotesk', sans-serif;
+          font-weight: normal;
+          padding-top: 20px;
+          font-size: 2rem;
+      }
+
+      ol {
+          list-style-type: cjk-ideographic;
+          margin-left: 2%;
+      }
+
+      li {
+          margin-top: 25px;
+          font-size: 1.4rem;
+          font-family: 'JetBrains Mono', monospace;
+          font-weight: normal;
+      }
+
+      .header-links {
+          font-size: 1.4rem;
+          font-family: 'JetBrains Mono', monospace;
+          font-weight: normal;
+          line-height: 1.9rem;
+      }
+
+      .header-link {
+          position: relative;
+          margin-top: 15px;
+          margin-left: 3px;
+          padding-right: 5px;
+          margin-right: 4px;
+          display: inline-block;
+      }
+
+      .header-link > .bi {
+          margin-right: 7px;
+      }
+
+      .header-link::after {
+          content: "";
+          background: white;
+          mix-blend-mode: exclusion;
+          width: calc(100% + 10px);
+          height: 0;
+          position: absolute;
+          bottom: -4px;
+          left: -10px;
+          transition: all .18s cubic-bezier(0.445, 0.05, 0.55, 0.95);
+      }
+
+      .header-link:hover::after {
+          height: calc(100% + 8px)
+      }
+
+      .link {
+          text-decoration: none;
+          color: white
+      }
+
+      .list-link {
+          width: 90%;
+          display: block;
+          position: relative;
+      }
+
+      .list-link::after {
+          content: "";
+          background: white;
+          mix-blend-mode: exclusion;
+          width: calc(100% + 20px);
+          height: 0;
+          position: absolute;
+          bottom: -4px;
+          left: -10px;
+          transition: all .18s cubic-bezier(0.445, 0.05, 0.55, 0.95);
+      }
+
+      .list-link:hover::after {
+          height: calc(100% + 8px)
+      }
+
+      .row {
+          display: flex;
+          flex-wrap: wrap;
+      }
+
+      .column {
+          flex: 33%;
+      }
+
+      .bi {
+          vertical-align: 0.02vh;
+      }
+
+      @media screen and (max-width: 1090px) {
+          .column {
+              flex: 100%;
+              width: 100%;
+          }
+      }
+
+      @media screen and (max-width: 1195px) {
+          .mobileBreak {
+              display: flex;
+          }
+      }
+
+      @media screen and (max-width: 1495px) {
+          body {
+              margin: 0 10%;
+          }
+      }
+
+      @media screen and (min-width: 1495px) {
+          body {
+              margin: 0 15%;
+          }
+      }
+
+      @media screen and (min-width: 1920px) {
+          body {
+              margin: 0 25%;
+          }
+      }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <div>
+    <span class="nameMiddle">Hi! I'm</span><br class="mobileBreak">
+    <span id="nameBig" class="rainbow-text">Dominik</span><br class="mobileBreak"><span
+    class="nameSmall"> or you maybe know me as Dafnik.</span>
+  </div>
+  <h1 id="sideDescription" style="margin-bottom: 25px;">
+    This is my personal website, here you can find passionate projects and awesome social media accounts.
+  </h1>
+
+  <div class="header-links">
+    <h3 style="margin-bottom: 17px;">social</h3>
+
+    <div style="display: inline-block">
+      <a class="link header-link" rel="noopener" href="https://gitlab.com/Dafnik" target="_blank">
+        gitlab
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-git"
+             viewBox="0 0 16 16">
+          <path
+            d="M15.698 7.287 8.712.302a1.03 1.03 0 0 0-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 0 1 1.55 1.56l1.773 1.774a1.224 1.224 0 0 1 1.267 2.025 1.226 1.226 0 0 1-2.002-1.334L8.58 5.963v4.353a1.226 1.226 0 1 1-1.008-.036V5.887a1.226 1.226 0 0 1-.666-1.608L5.093 2.465l-4.79 4.79a1.03 1.03 0 0 0 0 1.457l6.986 6.986a1.03 1.03 0 0 0 1.457 0l6.953-6.953a1.031 1.031 0 0 0 0-1.457"/>
+        </svg>
+      </a>/
+    </div>
+    <div style="display: inline-block">
+      <a class="link header-link" rel="noopener" href="mailto:contact@dafnik.me" target="_blank">
+        email
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-envelope-fill"
+             viewBox="0 0 16 16">
+          <path
+            d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.104l5.803-3.558L0 4.697ZM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757Zm3.436-.586L16 11.801V4.697l-5.803 3.546Z"/>
+        </svg>
+      </a>/
+    </div>
+    <div style="display: inline-block">
+      <a class="link header-link" rel="noopener" href="https://github.com/Dafnik" target="_blank">
+        github
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github"
+             viewBox="0 0 16 16">
+          <path
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+      </a>/
+    </div>
+    <div style="display: inline-block">
+      <a class="link header-link" rel="me noopener" href="https://voi.social/@Dafnik" target="_blank">
+        mastodon
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-mastodon"
+             viewBox="0 0 16 16">
+          <path
+            d="M11.19 12.195c2.016-.24 3.77-1.475 3.99-2.603.348-1.778.32-4.339.32-4.339 0-3.47-2.286-4.488-2.286-4.488C12.062.238 10.083.017 8.027 0h-.05C5.92.017 3.942.238 2.79.765c0 0-2.285 1.017-2.285 4.488l-.002.662c-.004.64-.007 1.35.011 2.091.083 3.394.626 6.74 3.78 7.57 1.454.383 2.703.463 3.709.408 1.823-.1 2.847-.647 2.847-.647l-.06-1.317s-1.303.41-2.767.36c-1.45-.05-2.98-.156-3.215-1.928a3.614 3.614 0 0 1-.033-.496s1.424.346 3.228.428c1.103.05 2.137-.064 3.188-.189zm1.613-2.47H11.13v-4.08c0-.859-.364-1.295-1.091-1.295-.804 0-1.207.517-1.207 1.541v2.233H7.168V5.89c0-1.024-.403-1.541-1.207-1.541-.727 0-1.091.436-1.091 1.296v4.079H3.197V5.522c0-.859.22-1.541.66-2.046.456-.505 1.052-.764 1.793-.764.856 0 1.504.328 1.933.983L8 4.39l.417-.695c.429-.655 1.077-.983 1.934-.983.74 0 1.336.259 1.791.764.442.505.661 1.187.661 2.046v4.203z"/>
+        </svg>
+      </a>/
+    </div>
+    <a class="link header-link" rel="noopener" href="./imprint.html" target="_blank">
+      imprint
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-book"
+           viewBox="0 0 16 16">
+        <path
+          d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/>
+      </svg>
+    </a>
+  </div>
+
+  <div class="row">
+    <div class="column">
+      <h3>> projects</h3>
+      <ol>
+        <li>
+          <a class="link list-link" rel="noopener" target="_blank"
+             href="https://gitlab.com/DatePoll">DatePollSystems</a>
+        </li>
+        <li>
+          <a class="link list-link" rel="noopener" target="_blank" href="https://datepoll.org/projects/datepoll">DatePoll
+            (club
+            management application)</a>
+        </li>
+        <li>
+          <a class="link list-link" rel="noopener" target="_blank" href="https://voi.social">voi.social (austrian
+            mastodon
+            instance)</a>
+        </li>
+      </ol>
+
+      <h3>< projects</h3>
+      <ol>
+        <li>
+          <a class="link list-link" rel="noopener" target="_blank" href="https://voi.social/@year_progress">year
+            progress
+            bot
+            (mastodon bot)</a>
+        </li>
+      </ol>
+    </div>
+
+    <div class="column">
+      <h3>other stuff</h3>
+      <ol>
+        <li>
+          <a class="link list-link" rel="noopener" href="https://status.dafnik.me">status monitor</a>
+        </li>
+        <li>
+          <a class="link list-link" rel="noopener" target="_blank"
+             href="https://translate.dafnik.me">translate.dafnik.me</a>
+        </li>
+        <li>
+          <a class="link list-link" rel="noopener" target="_blank" href="https://releases.datepoll.org">releases.datepoll.org</a>
+        </li>
+        <li>
+          <a class="link list-link" rel="noopener" target="_blank" href="https://share.dafnik.me">share.dafnik.me</a>
+        </li>
+      </ol>
+    </div>
+  </div>
+</div>
+</body>
+<script type="application/javascript">
+  document.getElementById('nameBig').classList.remove("rainbow-text")
+  if (new Date().getMonth() === 5) {
+    document.getElementById('nameBig').classList.add("rainbow-text")
+  } else {
+    const colors = [
+      "#AED581",
+      "#8BC34A",
+      "#1DE9B6",
+      "#29B6F6",
+      "#40C4FF",
+      "#BBDEFB",
+      "#42A5F5",
+      "#B39DDB",
+      "#4DB6AC",
+      "#81D4FA",
+      "#EF9A9A",
+      "#F4FF81",
+      "#CCFF90",
+      "#FFC107",
+      "#FF3D00",
+      "#18FFFF"];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    console.log(color);
+    document.getElementById('nameBig').style.color = color;
+  }
+</script>
+</html>
