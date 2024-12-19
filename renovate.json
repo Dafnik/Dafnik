@@ -1,10 +1,6 @@
 {
-  "baseBranches": [
-    "main"
-  ],
-  "enabledManagers": [
-    "github-actions"
-  ],
+  "baseBranches": ["main"],
+  "enabledManagers": ["github-actions", "npm"],
   "semanticCommits": "enabled",
   "semanticCommitScope": "",
   "semanticCommitType": "build",
@@ -16,26 +12,15 @@
     "before 4am on the 16 day of the month"
   ],
   "timezone": "Europe/Vienna",
-  "labels": [
-    "dependencies"
-  ],
-  "assignees": [
-    "Dafnik"
-  ],
+  "labels": ["dependencies"],
+  "assignees": ["Dafnik"],
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "groupName": "minor-updates"
     },
     {
-      "matchUpdateTypes": [
-        "major"
-      ],
+      "matchUpdateTypes": ["major"],
       "groupName": "major-risky-update"
     }
   ],
