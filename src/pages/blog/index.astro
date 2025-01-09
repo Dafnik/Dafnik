@@ -1,0 +1,42 @@
+---
+import HeaderText from '../../components/HeaderText.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import {getCollection} from 'astro:content';
+import {format} from 'date-fns';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+---
+
+<BaseLayout>
+  <div class="flex flex-col gap-16">
+    <HeaderText />
+
+    <div class="flex flex-col gap-4">
+      <h1 class="text-3xl">Blog posts</h1>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          posts.map((post) => (
+            <a href={'blog/' + post.slug} class="rounded-md border border-white">
+              {post.data.image && (
+                <img
+                  style="max-height: 20rem"
+                  src={'/thumbnails/' + post.data.image.url}
+                  alt={post.data.image.alt}
+                />
+              )}
+              <div class="flex flex-col gap-2 p-4">
+                <h2 class="text-xl">{post.data.title}</h2>
+                {post.data.description && <span class="">{post.data.description}</span>}
+
+                <div class="text-gray-300">on {format(post.data.pubDate, 'yyyy.MM.dd')}</div>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</BaseLayout>

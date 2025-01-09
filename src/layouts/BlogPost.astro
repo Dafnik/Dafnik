@@ -1,0 +1,25 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import type {CollectionEntry} from 'astro:content';
+import {format} from 'date-fns';
+
+type Props = CollectionEntry<'blog'>['data'];
+
+const {title, pubDate, image} = Astro.props;
+---
+
+<BaseLayout>
+  <div class="flex flex-col gap-8">
+    <a href="/blog" class="text-2xl text-gray-300">Dafnik's Blog</a>
+    <div class="flex flex-col gap-2">
+      <h1 class="jetbrains-mono text-3xl">{title}</h1>
+      <div class="text-gray-300">{format(pubDate, 'dd. MMMM yyyy')}</div>
+    </div>
+
+    <div
+      class="prose dark:prose-invert prose-headings:underline prose-h1:text-xl prose-h1:font-bold prose-p:text-justify prose-a:text-blue-600 prose-img:rounded-xl"
+      style="max-width: unset">
+      <slot />
+    </div>
+  </div>
+</BaseLayout>

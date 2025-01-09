@@ -1,0 +1,44 @@
+---
+import {ClientRouter} from 'astro:transitions';
+---
+
+<html lang="en">
+  <head>
+    <title>dafnik.me ⚛ Dominik</title>
+
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="This is my personal website, here you can find passionate projects and awesome social media accounts."
+    />
+
+    <meta property="og:url" content="https://dafnik.me" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="dafnik.me ⚛ Dominik" />
+    <meta
+      property="og:description"
+      content="Find passionate projects and awesome social media accounts from me."
+    />
+    <meta property="og:image" content="https://dafnik.me/images/favicon.ico" />
+
+    <meta name="generator" content={Astro.generator} />
+
+    <ClientRouter />
+  </head>
+
+  <body>
+    <div class="mx-8 py-16 md:max-w-5xl xl:mx-auto">
+      <slot />
+    </div>
+  </body>
+</html>
+
+<style>
+  body {
+    @apply m-0 bg-black p-0 text-white;
+  }
+</style>
