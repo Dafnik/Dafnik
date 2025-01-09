@@ -19,7 +19,7 @@ const posts = (await getCollection('blog')).sort(
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {
           posts.map((post) => (
-            <a href={'blog/' + post.slug} class="rounded-md border border-white">
+            <a href={'/blog/' + post.slug} class="rounded-md border border-white">
               {post.data.image && (
                 <img
                   style="max-height: 20rem"
