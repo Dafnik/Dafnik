@@ -121,14 +121,14 @@ you can create and maintain sophisticated email designs in a far more streamline
        private val templateEngine: TemplateEngine,
    ) {
        fun getRenderedMail(email: Email): EmailTemplateResponse {
-           val context = email.getContext().applyDefaultContext(email.getSubject())
+           val context = email.context.applyDefaultContext(email.subject)
            return EmailTemplateResponse(
                plain = templateEngine.process(
-                   "txt/${email.getTemplateName()}.txt",
+                   "txt/${email.templateName}.txt",
                    context,
                ),
                html = templateEngine.process(
-                   "html/${email.getTemplateName()}.html",
+                   "html/${email.templateName}.html",
                    context,
                ),
            )
