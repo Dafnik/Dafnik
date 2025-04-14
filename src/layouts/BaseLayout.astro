@@ -1,5 +1,7 @@
 ---
 import {ClientRouter} from 'astro:transitions';
+
+import './src/styles/global.css';
 ---
 
 <html lang="en">
@@ -38,6 +40,7 @@ import {ClientRouter} from 'astro:transitions';
 </html>
 
 <style>
+  @reference "../styles/global.css";
   body {
     @apply m-0 bg-black p-0 text-white;
   }

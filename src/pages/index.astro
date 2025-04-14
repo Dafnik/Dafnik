@@ -189,8 +189,9 @@ import HeaderText from '../components/HeaderText.astro';
 </BaseLayout>
 
 <style>
+  @reference "../styles/global.css";
   .list-link {
-    @apply relative block whitespace-nowrap text-nowrap break-keep;
+    @apply relative block text-nowrap break-keep whitespace-nowrap;
     width: 90%;
   }
 
