@@ -1,0 +1,131 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout>
+  <div class="flex flex-col gap-8">
+    <h1 class="text-4xl font-semibold text-gray-800 dark:text-gray-100">
+      Light / Dark Screenshot Split
+    </h1>
+
+    <div class="space-y-2">
+      <label class="block">
+        <span class="text-gray-700 dark:text-gray-200">Light Screenshot</span>
+        <input
+          id="lightInput"
+          type="file"
+          accept="image/*"
+          class="mt-1 block w-full text-sm text-gray-600 file:mr-4 file:rounded file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-300 dark:file:bg-blue-900 dark:file:text-blue-300 dark:hover:file:bg-blue-800"
+        />
+      </label>
+      <label class="block">
+        <span class="text-gray-700 dark:text-gray-200">Dark Screenshot</span>
+        <input
+          id="darkInput"
+          type="file"
+          accept="image/*"
+          class="mt-1 block w-full text-sm text-gray-600 file:mr-4 file:rounded file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-300 dark:file:bg-blue-900 dark:file:text-blue-300 dark:hover:file:bg-blue-800"
+        />
+      </label>
+    </div>
+
+    <div class="flex space-x-2">
+      <button
+        id="generateBtn"
+        class="flex-1 rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600 disabled:opacity-50">
+        Generate Split
+      </button>
+      <button
+        id="downloadBtn"
+        class="flex-1 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+        disabled>
+        Download
+      </button>
+    </div>
+
+    <div class="overflow-auto rounded border">
+      <canvas id="canvas" class="w-full"></canvas>
+    </div>
+  </div>
+
+  <script type="module">
+    const lightInput = document.getElementById('lightInput');
+    const darkInput = document.getElementById('darkInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let lightImg = null,
+      darkImg = null;
+
+    function loadImage(file) {
+      return new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => res(img);
+          img.onerror = rej;
+          img.src = reader.result;
+        };
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    lightInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) lightImg = await loadImage(file);
+    });
+    darkInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) darkImg = await loadImage(file);
+    });
+
+    generateBtn.addEventListener('click', () => {
+      if (!lightImg || !darkImg) {
+        alert('Please select both images.');
+        return;
+      }
+      const W = lightImg.width,
+        H = lightImg.height;
+      if (darkImg.width !== W || darkImg.height !== H) {
+        alert('Images must match dimensions.');
+        return;
+      }
+
+      canvas.width = W;
+      canvas.height = H;
+      // draw full light
+      ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(lightImg, 0, 0);
+
+      // clip to triangle (0,H)→(0,0)→(W,0)
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(W, 0);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(darkImg, 0, 0);
+      ctx.restore();
+
+      downloadBtn.disabled = false;
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.download = 'split.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  @reference "../styles/global.css";
+
+  body {
+    @apply text-lg;
+  }
+</style>
