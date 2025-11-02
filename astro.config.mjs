@@ -39,7 +39,7 @@ export default defineConfig({
         {
           icon: 'email',
           label: 'Email',
-          href: 'mailto:contact@dafnik.me',
+          href: 'mailto:contact+AT+dafnik.me',
         },
       ],
     }),

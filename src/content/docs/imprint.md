@@ -6,7 +6,7 @@ sidebar:
 
 Media owner / Medieninhaber: Dominik Dafert, 1100 Wien
 
-Contact / Kontakt: contact@dafnik.me
+Contact / Kontakt: contact+AT+dafnik.me
 
 ## Data privacy / Datenschutz
 
