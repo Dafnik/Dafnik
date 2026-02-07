@@ -1,71 +1,60 @@
-import React from 'react';
-
 import {useCallback, useRef} from 'react';
-import type {
-  EditorState,
-  SplitDirection,
-  BlurType,
-  ActiveTool,
-  LightImageSide,
-} from '@/lib/editor-store';
+import type {ChangeEvent} from 'react';
 import {
-  Droplets,
-  Grid3X3,
   ArrowLeftRight,
   ArrowUpDown,
+  Droplets,
+  Grid3X3,
+  ImageIcon,
+  MousePointer2,
   Slash,
   SplitSquareVertical,
   Upload,
-  ImageIcon,
-  MousePointer2,
 } from 'lucide-react';
-import {Slider} from '@/components/ui/slider';
-import {Label} from '@/components/ui/label';
 import {Button} from '@/components/ui/button';
+import {Label} from '@/components/ui/label';
+import {Slider} from '@/components/ui/slider';
+import type {SplitDirection} from '@/features/editor/state/types';
+import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface EditorSidebarProps {
-  state: EditorState;
-  onActiveToolChange: (tool: ActiveTool) => void;
-  onBrushRadiusChange: (v: number) => void;
-  onBrushStrengthChange: (v: number) => void;
-  onBlurTypeChange: (t: BlurType) => void;
-  showBlurOutlines: boolean;
-  onShowBlurOutlinesChange: (enabled: boolean) => void;
-  onSplitRatioChange: (v: number) => void;
-  onSplitDirectionChange: (d: SplitDirection) => void;
-  lightImageSide: LightImageSide;
-  onLightImageSideChange: (side: LightImageSide) => void;
   onAddSecondImage: (dataUrl: string) => void;
-  onRemoveSecondImage: () => void;
 }
 
-export function EditorSidebar({
-  state,
-  onActiveToolChange,
-  onBrushRadiusChange,
-  onBrushStrengthChange,
-  onBlurTypeChange,
-  showBlurOutlines,
-  onShowBlurOutlinesChange,
-  onSplitRatioChange,
-  onSplitDirectionChange,
-  lightImageSide,
-  onLightImageSideChange,
-  onAddSecondImage,
-  onRemoveSecondImage,
-}: EditorSidebarProps) {
+export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const image2 = useEditorStore((state) => state.image2);
+  const activeTool = useEditorStore((state) => state.activeTool);
+  const blurType = useEditorStore((state) => state.blurType);
+  const brushRadius = useEditorStore((state) => state.brushRadius);
+  const brushStrength = useEditorStore((state) => state.brushStrength);
+  const splitRatio = useEditorStore((state) => state.splitRatio);
+  const splitDirection = useEditorStore((state) => state.splitDirection);
+  const lightImageSide = useEditorStore((state) => state.lightImageSide);
+  const showBlurOutlines = useEditorStore((state) => state.showBlurOutlines);
+
+  const setActiveTool = useEditorStore((state) => state.setActiveTool);
+  const setBlurType = useEditorStore((state) => state.setBlurType);
+  const setBrushRadius = useEditorStore((state) => state.setBrushRadius);
+  const setBrushStrength = useEditorStore((state) => state.setBrushStrength);
+  const setSplitRatio = useEditorStore((state) => state.setSplitRatio);
+  const setSplitDirection = useEditorStore((state) => state.setSplitDirection);
+  const setLightImageSide = useEditorStore((state) => state.setLightImageSide);
+  const removeSecondImage = useEditorStore((state) => state.removeSecondImage);
+  const setShowBlurOutlines = useEditorStore((state) => state.setShowBlurOutlines);
+
   const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
       if (!file) return;
+
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        onAddSecondImage(ev.target?.result as string);
+      reader.onload = (loadEvent) => {
+        onAddSecondImage(loadEvent.target?.result as string);
       };
       reader.readAsDataURL(file);
-      e.target.value = '';
+      event.target.value = '';
     },
     [onAddSecondImage],
   );
@@ -74,15 +63,14 @@ export function EditorSidebar({
     <aside
       className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r"
       style={{background: 'hsl(var(--sidebar-background))'}}>
-      {/* Tool Selector */}
       <div className="border-border border-b p-4">
         <Label className="text-muted-foreground mb-2 block text-xs">Tool</Label>
         <div className="flex gap-1">
           <button
             type="button"
-            onClick={() => onActiveToolChange('select')}
+            onClick={() => setActiveTool('select')}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-              state.activeTool === 'select'
+              activeTool === 'select'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}>
@@ -91,9 +79,9 @@ export function EditorSidebar({
           </button>
           <button
             type="button"
-            onClick={() => onActiveToolChange('blur')}
+            onClick={() => setActiveTool('blur')}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-              state.activeTool === 'blur'
+              activeTool === 'blur'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}>
@@ -103,24 +91,22 @@ export function EditorSidebar({
         </div>
       </div>
 
-      {/* Blur Brush Settings */}
       <div
-        className={`border-border border-b p-4 transition-opacity ${state.activeTool !== 'blur' ? 'pointer-events-none opacity-40' : ''}`}>
+        className={`border-border border-b p-4 transition-opacity ${activeTool !== 'blur' ? 'pointer-events-none opacity-40' : ''}`}>
         <div className="mb-4 flex items-center gap-2">
           <Droplets className="text-primary h-4 w-4" />
           <h3 className="text-foreground text-sm font-semibold">Blur Settings</h3>
         </div>
 
         <div className="space-y-4">
-          {/* Blur Type */}
           <div>
             <Label className="text-muted-foreground mb-2 block text-xs">Blur Type</Label>
             <div className="flex gap-1">
               <button
                 type="button"
-                onClick={() => onBlurTypeChange('normal')}
+                onClick={() => setBlurType('normal')}
                 className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  state.blurType === 'normal'
+                  blurType === 'normal'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}>
@@ -129,9 +115,9 @@ export function EditorSidebar({
               </button>
               <button
                 type="button"
-                onClick={() => onBlurTypeChange('pixelated')}
+                onClick={() => setBlurType('pixelated')}
                 className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  state.blurType === 'pixelated'
+                  blurType === 'pixelated'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}>
@@ -146,7 +132,7 @@ export function EditorSidebar({
             <button
               type="button"
               aria-pressed={showBlurOutlines}
-              onClick={() => onShowBlurOutlinesChange(!showBlurOutlines)}
+              onClick={() => setShowBlurOutlines(!showBlurOutlines)}
               className={`flex w-full items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 showBlurOutlines
                   ? 'bg-primary text-primary-foreground'
@@ -156,17 +142,14 @@ export function EditorSidebar({
             </button>
           </div>
 
-          {/* Radius */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <Label className="text-muted-foreground text-xs">Radius</Label>
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {state.brushRadius}px
-              </span>
+              <span className="text-muted-foreground text-xs tabular-nums">{brushRadius}px</span>
             </div>
             <Slider
-              value={[state.brushRadius]}
-              onValueChange={([v]) => onBrushRadiusChange(v)}
+              value={[brushRadius]}
+              onValueChange={([value]) => setBrushRadius(value)}
               min={5}
               max={100}
               step={1}
@@ -174,17 +157,14 @@ export function EditorSidebar({
             />
           </div>
 
-          {/* Strength */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <Label className="text-muted-foreground text-xs">Strength</Label>
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {state.brushStrength}
-              </span>
+              <span className="text-muted-foreground text-xs tabular-nums">{brushStrength}</span>
             </div>
             <Slider
-              value={[state.brushStrength]}
-              onValueChange={([v]) => onBrushStrengthChange(v)}
+              value={[brushStrength]}
+              onValueChange={([value]) => setBrushStrength(value)}
               min={1}
               max={30}
               step={1}
@@ -194,14 +174,13 @@ export function EditorSidebar({
         </div>
       </div>
 
-      {/* Split View Section */}
       <div className="border-border border-b p-4">
         <div className="mb-4 flex items-center gap-2">
           <SplitSquareVertical className="text-primary h-4 w-4" />
           <h3 className="text-foreground text-sm font-semibold">Split View</h3>
         </div>
 
-        {!state.image2 ? (
+        {!image2 ? (
           <div>
             <button
               type="button"
@@ -216,22 +195,21 @@ export function EditorSidebar({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Direction */}
             <div>
               <Label className="text-muted-foreground mb-2 block text-xs">Direction</Label>
               <div className="grid grid-cols-4 gap-1">
                 {[
-                  {dir: 'vertical' as SplitDirection, icon: ArrowLeftRight, label: 'V'},
-                  {dir: 'horizontal' as SplitDirection, icon: ArrowUpDown, label: 'H'},
-                  {dir: 'diagonal-tl-br' as SplitDirection, icon: Slash, label: '\\'},
-                  {dir: 'diagonal-tr-bl' as SplitDirection, icon: Slash, label: '/'},
-                ].map(({dir, icon: Icon, label}) => (
+                  {dir: 'vertical' as SplitDirection, icon: ArrowLeftRight},
+                  {dir: 'horizontal' as SplitDirection, icon: ArrowUpDown},
+                  {dir: 'diagonal-tl-br' as SplitDirection, icon: Slash},
+                  {dir: 'diagonal-tr-bl' as SplitDirection, icon: Slash},
+                ].map(({dir, icon: Icon}) => (
                   <button
                     key={dir}
                     type="button"
-                    onClick={() => onSplitDirectionChange(dir)}
+                    onClick={() => setSplitDirection(dir, {commitHistory: true})}
                     className={`flex items-center justify-center rounded-md p-2 transition-colors ${
-                      state.splitDirection === dir
+                      splitDirection === dir
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                     }`}
@@ -242,17 +220,14 @@ export function EditorSidebar({
               </div>
             </div>
 
-            {/* Ratio */}
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <Label className="text-muted-foreground text-xs">Split Ratio</Label>
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  {state.splitRatio}%
-                </span>
+                <span className="text-muted-foreground text-xs tabular-nums">{splitRatio}%</span>
               </div>
               <Slider
-                value={[state.splitRatio]}
-                onValueChange={([v]) => onSplitRatioChange(v)}
+                value={[splitRatio]}
+                onValueChange={([value]) => setSplitRatio(value, {debouncedHistory: true})}
                 min={10}
                 max={90}
                 step={1}
@@ -260,13 +235,12 @@ export function EditorSidebar({
               />
             </div>
 
-            {/* Light/Dark Side Placement */}
             <div>
               <Label className="text-muted-foreground mb-2 block text-xs">Placement</Label>
               <div className="grid grid-cols-2 gap-1">
                 <button
                   type="button"
-                  onClick={() => onLightImageSideChange('left')}
+                  onClick={() => setLightImageSide('left', {reorderImages: true})}
                   className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
                     lightImageSide === 'left'
                       ? 'bg-primary text-primary-foreground'
@@ -277,7 +251,7 @@ export function EditorSidebar({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onLightImageSideChange('right')}
+                  onClick={() => setLightImageSide('right', {reorderImages: true})}
                   className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
                     lightImageSide === 'right'
                       ? 'bg-primary text-primary-foreground'
@@ -293,7 +267,7 @@ export function EditorSidebar({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={onRemoveSecondImage}
+                onClick={removeSecondImage}
                 className="w-full text-xs">
                 <ImageIcon className="mr-1.5 h-3 w-3" />
                 Remove second image
@@ -303,7 +277,6 @@ export function EditorSidebar({
         )}
       </div>
 
-      {/* Keyboard Shortcuts */}
       <div className="mt-auto p-4">
         <h3 className="text-muted-foreground mb-2 text-xs font-semibold">Shortcuts</h3>
         <div className="text-muted-foreground space-y-1 text-[10px]">

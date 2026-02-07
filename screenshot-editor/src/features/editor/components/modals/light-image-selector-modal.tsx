@@ -1,32 +1,33 @@
 import {useEffect} from 'react';
-import {Button} from '@/components/ui/button';
 import {X} from 'lucide-react';
+import {Button} from '@/components/ui/button';
+import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface LightImageSelectorModalProps {
-  open: boolean;
-  firstImage: string | null;
-  secondImage: string | null;
   onSelectFirst: () => void;
   onSelectSecond: () => void;
   onCancel: () => void;
 }
 
 export function LightImageSelectorModal({
-  open,
-  firstImage,
-  secondImage,
   onSelectFirst,
   onSelectSecond,
   onCancel,
 }: LightImageSelectorModalProps) {
+  const open = useEditorStore((state) => state.showLightSelectorModal);
+  const firstImage = useEditorStore((state) => state.selectorFirstImage);
+  const secondImage = useEditorStore((state) => state.selectorSecondImage);
+
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
+
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel();
     };
+
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onCancel]);
+  }, [onCancel, open]);
 
   if (!open || !firstImage || !secondImage) return null;
 
@@ -35,8 +36,8 @@ export function LightImageSelectorModal({
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onCancel}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') onCancel();
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') onCancel();
         }}
         role="button"
         tabIndex={0}

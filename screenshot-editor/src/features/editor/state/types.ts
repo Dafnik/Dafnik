@@ -1,0 +1,160 @@
+export type SplitDirection = 'horizontal' | 'vertical' | 'diagonal-tl-br' | 'diagonal-tr-bl';
+export type BlurType = 'normal' | 'pixelated';
+export type ActiveTool = 'select' | 'blur';
+export type LightImageSide = 'left' | 'right';
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface BlurStroke {
+  points: Point[];
+  radius: number;
+  strength: number;
+  blurType: BlurType;
+}
+
+export interface HistorySnapshot {
+  image1: string | null;
+  image2: string | null;
+  splitRatio: number;
+  splitDirection: SplitDirection;
+  blurStrokes: BlurStroke[];
+}
+
+export interface DocumentSlice {
+  image1: string | null;
+  image2: string | null;
+  imageWidth: number;
+  imageHeight: number;
+  splitRatio: number;
+  splitDirection: SplitDirection;
+  blurStrokes: BlurStroke[];
+}
+
+export interface ToolSlice {
+  activeTool: ActiveTool;
+  blurType: BlurType;
+  brushRadius: number;
+  brushStrength: number;
+  lightImageSide: LightImageSide;
+  showBlurOutlines: boolean;
+}
+
+export interface ViewportSlice {
+  zoom: number;
+  panX: number;
+  panY: number;
+}
+
+export interface InteractionSlice {
+  isDrawing: boolean;
+  currentStroke: BlurStroke | null;
+}
+
+export type LightSelectorState = 'idle' | 'awaitingSelection' | 'resolved' | 'cancelled';
+
+export interface UiSlice {
+  isEditing: boolean;
+  showExportModal: boolean;
+  showLightSelectorModal: boolean;
+  selectorFirstImage: string | null;
+  selectorSecondImage: string | null;
+  lightSelectorState: LightSelectorState;
+}
+
+export interface HistorySlice {
+  history: HistorySnapshot[];
+  historyIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+export interface PersistedSettings {
+  splitRatio: number;
+  splitDirection: SplitDirection;
+  brushRadius: number;
+  brushStrength: number;
+  blurType: BlurType;
+  activeTool: ActiveTool;
+  lightImageSide: LightImageSide;
+  zoom: number;
+}
+
+export interface InitializeEditorPayload {
+  image1: string;
+  image2: string | null;
+  width: number;
+  height: number;
+}
+
+export interface SetSplitDirectionOptions {
+  commitHistory: boolean;
+}
+
+export interface SetSplitRatioOptions {
+  debouncedHistory: boolean;
+}
+
+export interface SetLightImageSideOptions {
+  reorderImages: boolean;
+}
+
+export interface LightSelectorPayload {
+  firstImage: string;
+  secondImage: string;
+}
+
+export type LightSelection = 'first' | 'second' | 'cancel';
+
+export interface EditorStoreActions {
+  initializeEditor: (payload: InitializeEditorPayload) => void;
+  resetProject: () => void;
+  resetSettingsToDefaults: () => void;
+  setActiveTool: (tool: ActiveTool) => void;
+  setBrushRadius: (value: number) => void;
+  setBrushStrength: (value: number) => void;
+  setBlurType: (type: BlurType) => void;
+  setSplitDirection: (
+    direction: SplitDirection,
+    options?: Partial<SetSplitDirectionOptions>,
+  ) => void;
+  setSplitRatio: (value: number, options?: Partial<SetSplitRatioOptions>) => void;
+  setLightImageSide: (side: LightImageSide, options?: Partial<SetLightImageSideOptions>) => void;
+  setZoom: (value: number) => void;
+  setPan: (x: number, y: number) => void;
+  startStroke: (x: number, y: number) => void;
+  appendStrokePoint: (x: number, y: number) => void;
+  finishStroke: () => void;
+  cancelStroke: () => void;
+  setShowBlurOutlines: (enabled: boolean) => void;
+  openExportModal: () => void;
+  closeExportModal: () => void;
+  openLightSelector: (payload: LightSelectorPayload) => void;
+  resolveLightSelector: (selection: LightSelection) => void;
+  addSecondImage: (image: string) => void;
+  removeSecondImage: () => void;
+  pushHistorySnapshot: () => void;
+  undo: () => void;
+  redo: () => void;
+}
+
+export type EditorStoreState = DocumentSlice &
+  ToolSlice &
+  ViewportSlice &
+  InteractionSlice &
+  UiSlice &
+  HistorySlice &
+  EditorStoreActions;
+
+export const DEFAULT_SETTINGS: PersistedSettings = {
+  splitRatio: 50,
+  splitDirection: 'vertical',
+  brushRadius: 20,
+  brushStrength: 10,
+  blurType: 'normal',
+  activeTool: 'select',
+  lightImageSide: 'left',
+  zoom: 100,
+};

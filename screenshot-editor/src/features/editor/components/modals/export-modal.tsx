@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useState} from 'react';
+import {Check, Download, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
-import {Download, X, Check} from 'lucide-react';
+import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 type ExportFormat = 'png' | 'webp' | 'jpg';
 
@@ -12,7 +13,7 @@ const ALL_FORMATS: {id: ExportFormat; label: string; mime: string; ext: string}[
 
 const STORAGE_KEY = 'screenshot-editor-export-formats';
 
-function getDefaultName(): string {
+function getDefaultName() {
   const now = new Date();
   const date = now.toISOString().slice(0, 10).replace(/-/g, '');
   return `screenshot_${date}`;
@@ -20,52 +21,49 @@ function getDefaultName(): string {
 
 function getSavedFormats(): ExportFormat[] {
   if (typeof window === 'undefined') return ['png'];
+
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as ExportFormat[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.filter((f) => ALL_FORMATS.some((af) => af.id === f));
-      }
-    }
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return ['png'];
+
+    const parsed = JSON.parse(raw) as ExportFormat[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return ['png'];
+
+    return parsed.filter((format) => ALL_FORMATS.some((item) => item.id === format));
   } catch {
-    // ignore
+    return ['png'];
   }
-  return ['png'];
 }
 
 function saveFormats(formats: ExportFormat[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(formats));
   } catch {
-    // ignore
+    // ignore storage failures
   }
 }
 
 interface ExportModalProps {
-  open: boolean;
-  onClose: () => void;
   canvasRef: HTMLCanvasElement | null;
 }
 
-export function ExportModal({open, onClose, canvasRef}: ExportModalProps) {
+export function ExportModal({canvasRef}: ExportModalProps) {
+  const open = useEditorStore((state) => state.showExportModal);
+  const closeExportModal = useEditorStore((state) => state.closeExportModal);
   const [fileName, setFileName] = useState(getDefaultName);
   const [selectedFormats, setSelectedFormats] = useState<ExportFormat[]>(getSavedFormats);
 
-  // Reset name each time the modal opens
   useEffect(() => {
-    if (open) {
-      setFileName(getDefaultName());
-      setSelectedFormats(getSavedFormats());
-    }
+    if (!open) return;
+    setFileName(getDefaultName());
+    setSelectedFormats(getSavedFormats());
   }, [open]);
 
   const toggleFormat = useCallback((format: ExportFormat) => {
     setSelectedFormats((prev) => {
       if (prev.includes(format)) {
-        // Don't allow deselecting all
         if (prev.length === 1) return prev;
-        return prev.filter((f) => f !== format);
+        return prev.filter((item) => item !== format);
       }
       return [...prev, format];
     });
@@ -77,7 +75,7 @@ export function ExportModal({open, onClose, canvasRef}: ExportModalProps) {
     saveFormats(selectedFormats);
 
     for (const formatId of selectedFormats) {
-      const format = ALL_FORMATS.find((f) => f.id === formatId);
+      const format = ALL_FORMATS.find((item) => item.id === formatId);
       if (!format) continue;
 
       const dataUrl = canvasRef.toDataURL(format.mime, format.id === 'jpg' ? 0.92 : undefined);
@@ -89,51 +87,47 @@ export function ExportModal({open, onClose, canvasRef}: ExportModalProps) {
       document.body.removeChild(link);
     }
 
-    onClose();
-  }, [canvasRef, selectedFormats, fileName, onClose]);
+    closeExportModal();
+  }, [canvasRef, closeExportModal, fileName, selectedFormats]);
 
-  // Close on escape
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeExportModal();
     };
+
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [closeExportModal, open]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') onClose();
+        onClick={closeExportModal}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') closeExportModal();
         }}
         role="button"
         tabIndex={0}
         aria-label="Close export modal"
       />
 
-      {/* Modal */}
       <div className="bg-card border-border relative w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-2xl">
-        {/* Header */}
         <div className="border-border flex items-center justify-between border-b px-5 py-4">
           <h2 className="text-foreground text-sm font-semibold">Export Image</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeExportModal}
             className="text-muted-foreground hover:text-foreground hover:bg-secondary flex h-7 w-7 items-center justify-center rounded-md transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex flex-col gap-5 px-5 py-5">
-          {/* File name */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="export-filename" className="text-muted-foreground text-xs font-medium">
               File name
@@ -142,9 +136,9 @@ export function ExportModal({open, onClose, canvasRef}: ExportModalProps) {
               id="export-filename"
               type="text"
               value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleExport();
+              onChange={(event) => setFileName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handleExport();
               }}
               className="bg-secondary text-foreground border-border focus:ring-primary placeholder:text-muted-foreground h-9 rounded-lg border px-3 text-sm outline-none focus:ring-1"
               placeholder="screenshot"
@@ -152,25 +146,25 @@ export function ExportModal({open, onClose, canvasRef}: ExportModalProps) {
             />
           </div>
 
-          {/* Formats */}
           <div className="flex flex-col gap-2">
             <span className="text-muted-foreground text-xs font-medium">
               Format{selectedFormats.length > 1 ? 's' : ''}
             </span>
             <div className="flex gap-2">
               {ALL_FORMATS.map((format) => {
-                const isSelected = selectedFormats.includes(format.id);
+                const selected = selectedFormats.includes(format.id);
+
                 return (
                   <button
                     key={format.id}
                     type="button"
                     onClick={() => toggleFormat(format.id)}
                     className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-all ${
-                      isSelected
+                      selected
                         ? 'bg-primary/10 border-primary text-primary'
                         : 'bg-secondary border-border text-secondary-foreground hover:border-muted-foreground'
                     }`}>
-                    {isSelected && <Check className="h-3.5 w-3.5" />}
+                    {selected && <Check className="h-3.5 w-3.5" />}
                     {format.label}
                   </button>
                 );
@@ -182,9 +176,8 @@ export function ExportModal({open, onClose, canvasRef}: ExportModalProps) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="border-border flex items-center justify-end gap-2 border-t px-5 py-4">
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 text-xs">
+          <Button variant="ghost" size="sm" onClick={closeExportModal} className="h-8 text-xs">
             Cancel
           </Button>
           <Button
