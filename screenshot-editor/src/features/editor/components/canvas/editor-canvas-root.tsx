@@ -44,7 +44,14 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
     <div
       ref={containerRef}
       className="relative flex-1 overflow-hidden"
-      style={{background: 'oklch(var(--editor-canvas-bg))'}}>
+      style={{
+        background: 'oklch(var(--editor-canvas-bg))',
+        cursor: isPanning ? 'grabbing' : isSelectTool ? 'grab' : 'default',
+      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}>
       <div
         className="absolute inset-0"
         style={{
@@ -81,10 +88,6 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
                     : 'default',
               imageRendering: zoom > 200 ? 'pixelated' : 'auto',
             }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
           />
 
           <BlurOutlineOverlay

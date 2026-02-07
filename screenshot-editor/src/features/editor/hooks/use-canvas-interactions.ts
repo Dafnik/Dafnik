@@ -40,9 +40,26 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
     [canvasRef],
   );
 
+  const isWithinCanvasBounds = useCallback(
+    (event: ReactMouseEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return false;
+
+      const rect = canvas.getBoundingClientRect();
+      return (
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      );
+    },
+    [canvasRef],
+  );
+
   const handleMouseDown = useCallback(
     (event: ReactMouseEvent) => {
       if (event.button === 1 || (event.button === 0 && event.altKey)) {
+        event.preventDefault();
         setIsPanning(true);
         lastPanPos.current = {x: event.clientX, y: event.clientY};
         return;
@@ -51,21 +68,25 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       if (event.button !== 0) return;
 
       if (activeTool === 'select') {
+        event.preventDefault();
         setIsPanning(true);
         lastPanPos.current = {x: event.clientX, y: event.clientY};
         return;
       }
 
+      if (!isWithinCanvasBounds(event)) return;
+
       const coords = getImageCoords(event);
       startStroke(coords.x, coords.y);
     },
-    [activeTool, getImageCoords, startStroke],
+    [activeTool, getImageCoords, isWithinCanvasBounds, startStroke],
   );
 
   const handleMouseMove = useCallback(
     (event: ReactMouseEvent) => {
+      const isOverCanvas = isWithinCanvasBounds(event);
       const coords = getImageCoords(event);
-      setCursorPos(coords);
+      setCursorPos(isOverCanvas ? coords : null);
 
       if (isPanning) {
         const dx = event.clientX - lastPanPos.current.x;
@@ -76,10 +97,24 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       }
 
       if (isDrawing) {
+        if (!isOverCanvas) {
+          finishStroke();
+          return;
+        }
         appendStrokePoint(coords.x, coords.y);
       }
     },
-    [appendStrokePoint, getImageCoords, isDrawing, isPanning, panX, panY, setPan],
+    [
+      appendStrokePoint,
+      finishStroke,
+      getImageCoords,
+      isDrawing,
+      isPanning,
+      isWithinCanvasBounds,
+      panX,
+      panY,
+      setPan,
+    ],
   );
 
   const handleMouseUp = useCallback(() => {
