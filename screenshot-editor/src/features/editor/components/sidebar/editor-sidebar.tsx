@@ -304,6 +304,12 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
               Scroll
             </kbd>
           </div>
+          <div className="flex justify-between">
+            <span>Toggle outlines</span>
+            <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
+              Ctrl+D
+            </kbd>
+          </div>
         </div>
       </div>
 

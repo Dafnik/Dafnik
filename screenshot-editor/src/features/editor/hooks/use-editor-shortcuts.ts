@@ -4,6 +4,8 @@ import {useEditorStore} from '@/features/editor/state/use-editor-store';
 export function useEditorShortcuts() {
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
+  const showBlurOutlines = useEditorStore((state) => state.showBlurOutlines);
+  const setShowBlurOutlines = useEditorStore((state) => state.setShowBlurOutlines);
 
   useEffect(() => {
     const preventBrowserZoom = (event: WheelEvent) => {
@@ -30,9 +32,14 @@ export function useEditorShortcuts() {
         event.preventDefault();
         redo();
       }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+        event.preventDefault();
+        setShowBlurOutlines(!showBlurOutlines);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, setShowBlurOutlines, showBlurOutlines]);
 }
