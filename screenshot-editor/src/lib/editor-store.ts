@@ -2,6 +2,7 @@
 export type SplitDirection = 'horizontal' | 'vertical' | 'diagonal-tl-br' | 'diagonal-tr-bl';
 export type BlurType = 'normal' | 'pixelated';
 export type ActiveTool = 'select' | 'blur';
+export type LightImageSide = 'left' | 'right';
 
 export interface BlurStroke {
   points: {x: number; y: number}[];

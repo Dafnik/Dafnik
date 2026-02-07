@@ -1,7 +1,13 @@
 import React from 'react';
 
 import {useCallback, useRef} from 'react';
-import type {EditorState, SplitDirection, BlurType, ActiveTool} from '@/lib/editor-store';
+import type {
+  EditorState,
+  SplitDirection,
+  BlurType,
+  ActiveTool,
+  LightImageSide,
+} from '@/lib/editor-store';
 import {
   Droplets,
   Grid3X3,
@@ -10,7 +16,6 @@ import {
   Slash,
   SplitSquareVertical,
   Upload,
-  RefreshCw,
   ImageIcon,
   MousePointer2,
 } from 'lucide-react';
@@ -26,7 +31,8 @@ interface EditorSidebarProps {
   onBlurTypeChange: (t: BlurType) => void;
   onSplitRatioChange: (v: number) => void;
   onSplitDirectionChange: (d: SplitDirection) => void;
-  onSwapImages: () => void;
+  lightImageSide: LightImageSide;
+  onLightImageSideChange: (side: LightImageSide) => void;
   onAddSecondImage: (dataUrl: string) => void;
   onRemoveSecondImage: () => void;
 }
@@ -39,7 +45,8 @@ export function EditorSidebar({
   onBlurTypeChange,
   onSplitRatioChange,
   onSplitDirectionChange,
-  onSwapImages,
+  lightImageSide,
+  onLightImageSideChange,
   onAddSecondImage,
   onRemoveSecondImage,
 }: EditorSidebarProps) {
@@ -234,23 +241,43 @@ export function EditorSidebar({
               />
             </div>
 
-            {/* Swap & Remove */}
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onSwapImages}
-                className="flex-1 text-xs">
-                <RefreshCw className="mr-1.5 h-3 w-3" />
-                Swap
-              </Button>
+            {/* Light/Dark Side Placement */}
+            <div>
+              <Label className="text-muted-foreground mb-2 block text-xs">Placement</Label>
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  type="button"
+                  onClick={() => onLightImageSideChange('left')}
+                  className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
+                    lightImageSide === 'left'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}>
+                  <div className="font-semibold">Light Left</div>
+                  <div className="opacity-80">Dark Right</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onLightImageSideChange('right')}
+                  className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
+                    lightImageSide === 'right'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}>
+                  <div className="font-semibold">Light Right</div>
+                  <div className="opacity-80">Dark Left</div>
+                </button>
+              </div>
+            </div>
+
+            <div>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={onRemoveSecondImage}
-                className="flex-1 text-xs">
+                className="w-full text-xs">
                 <ImageIcon className="mr-1.5 h-3 w-3" />
-                Remove
+                Remove second image
               </Button>
             </div>
           </div>

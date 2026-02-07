@@ -9,6 +9,7 @@ import {
   type BlurStroke,
   type BlurType,
   type ActiveTool,
+  type LightImageSide,
   type SplitDirection,
   type HistoryEntry,
   initialEditorState,
@@ -16,8 +17,19 @@ import {
   applyHistoryEntry,
 } from '@/lib/editor-store';
 
+const LUMINANCE_CONFIDENCE_THRESHOLD = 12;
+
 export default function App() {
   const [state, setState] = useState<EditorState>(initialEditorState);
+  const [lightImageSide, setLightImageSide] = useState<LightImageSide>(() => {
+    try {
+      const stored = localStorage.getItem('editor-light-image-side');
+      if (stored === 'left' || stored === 'right') {
+        return stored;
+      }
+    } catch {}
+    return 'left';
+  });
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -118,72 +130,177 @@ export default function App() {
     }
   }, []);
 
-  // Initial image load - restore all settings from localStorage
-  const handleImagesLoaded = useCallback(
-    (image1: string, image2: string | null) => {
+  const orderBySidePreference = useCallback(
+    (lightImage: string, darkImage: string, side: LightImageSide) => {
+      if (side === 'left') {
+        return {image1: lightImage, image2: darkImage};
+      }
+      return {image1: darkImage, image2: lightImage};
+    },
+    [],
+  );
+
+  const computeAverageLuminance = useCallback((dataUrl: string): Promise<number> => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
-        // Restore split settings (only apply if two images)
-        let savedRatio = initialEditorState.splitRatio;
-        let savedDirection = initialEditorState.splitDirection;
-        if (image2) {
-          const storedRatio = readSetting('split-ratio');
-          const storedDirection = readSetting('split-direction');
-          if (storedRatio) savedRatio = Number(storedRatio);
-          if (
-            storedDirection &&
-            ['horizontal', 'vertical', 'diagonal-tl-br', 'diagonal-tr-bl'].includes(storedDirection)
-          ) {
-            savedDirection = storedDirection as SplitDirection;
-          }
+        const maxSize = 64;
+        const scale = Math.min(1, maxSize / img.naturalWidth, maxSize / img.naturalHeight);
+        const width = Math.max(1, Math.round(img.naturalWidth * scale));
+        const height = Math.max(1, Math.round(img.naturalHeight * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(0);
+          return;
         }
 
-        // Restore brush, tool, and zoom settings (always)
-        let savedBrushRadius = initialEditorState.brushRadius;
-        let savedBrushStrength = initialEditorState.brushStrength;
-        let savedBlurType = initialEditorState.blurType as string;
-        let savedActiveTool = initialEditorState.activeTool as string;
-        let savedZoom = 100;
+        ctx.drawImage(img, 0, 0, width, height);
+        const imageData = ctx.getImageData(0, 0, width, height).data;
 
-        const storedRadius = readSetting('brush-radius');
-        const storedStrength = readSetting('brush-strength');
-        const storedBlurType = readSetting('blur-type');
-        const storedTool = readSetting('active-tool');
-        const storedZoom = readSetting('zoom');
+        let luminanceSum = 0;
+        let pixelCount = 0;
 
-        if (storedRadius) savedBrushRadius = Number(storedRadius);
-        if (storedStrength) savedBrushStrength = Number(storedStrength);
-        if (storedBlurType && ['normal', 'pixelated'].includes(storedBlurType))
-          savedBlurType = storedBlurType;
-        if (storedTool && ['select', 'blur'].includes(storedTool)) savedActiveTool = storedTool;
-        if (storedZoom) savedZoom = Math.max(10, Math.min(500, Number(storedZoom)));
+        for (let i = 0; i < imageData.length; i += 4) {
+          const alpha = imageData[i + 3] / 255;
+          if (alpha === 0) continue;
+          const r = imageData[i];
+          const g = imageData[i + 1];
+          const b = imageData[i + 2];
+          const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-        const newState: EditorState = {
-          ...initialEditorState,
-          image1,
-          image2,
-          splitRatio: image2 ? savedRatio : initialEditorState.splitRatio,
-          splitDirection: image2 ? savedDirection : initialEditorState.splitDirection,
-          brushRadius: savedBrushRadius,
-          brushStrength: savedBrushStrength,
-          blurType: savedBlurType as BlurType,
-          activeTool: savedActiveTool as ActiveTool,
-          imageWidth: img.naturalWidth,
-          imageHeight: img.naturalHeight,
-          zoom: savedZoom,
-          panX: 0,
-          panY: 0,
-        };
-        setState(newState);
-        const entry = getHistoryEntry(newState);
-        setHistory([entry]);
-        setHistoryIndex(0);
-        setIsEditing(true);
+          luminanceSum += luminance * alpha;
+          pixelCount += alpha;
+        }
+
+        resolve(pixelCount > 0 ? luminanceSum / pixelCount : 0);
       };
-      img.src = image1;
+      img.onerror = () => reject(new Error('Failed to decode image for luminance analysis.'));
+      img.src = dataUrl;
+    });
+  }, []);
+
+  const classifyPair = useCallback(
+    async (firstImage: string, secondImage: string) => {
+      let firstLuminance = 0;
+      let secondLuminance = 0;
+
+      try {
+        [firstLuminance, secondLuminance] = await Promise.all([
+          computeAverageLuminance(firstImage),
+          computeAverageLuminance(secondImage),
+        ]);
+      } catch {
+        const firstIsLight = window.confirm(
+          "Couldn't confidently detect light vs dark. Is the first uploaded image the LIGHT screenshot?",
+        );
+        return firstIsLight
+          ? {lightImage: firstImage, darkImage: secondImage}
+          : {lightImage: secondImage, darkImage: firstImage};
+      }
+
+      if (Math.abs(firstLuminance - secondLuminance) < LUMINANCE_CONFIDENCE_THRESHOLD) {
+        const firstIsLight = window.confirm(
+          "Couldn't confidently detect light vs dark. Is the first uploaded image the LIGHT screenshot?",
+        );
+        return firstIsLight
+          ? {lightImage: firstImage, darkImage: secondImage}
+          : {lightImage: secondImage, darkImage: firstImage};
+      }
+
+      return firstLuminance >= secondLuminance
+        ? {lightImage: firstImage, darkImage: secondImage}
+        : {lightImage: secondImage, darkImage: firstImage};
     },
-    [readSetting],
+    [computeAverageLuminance],
+  );
+
+  // Initial image load - restore all settings from localStorage
+  const handleImagesLoaded = useCallback(
+    (inputImage1: string, inputImage2: string | null) => {
+      const initializeEditor = async () => {
+        let image1 = inputImage1;
+        let image2 = inputImage2;
+
+        if (inputImage2) {
+          const {lightImage, darkImage} = await classifyPair(inputImage1, inputImage2);
+          const ordered = orderBySidePreference(lightImage, darkImage, lightImageSide);
+          image1 = ordered.image1;
+          image2 = ordered.image2;
+        }
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          // Restore split settings (only apply if two images)
+          let savedRatio = initialEditorState.splitRatio;
+          let savedDirection = initialEditorState.splitDirection;
+          if (image2) {
+            const storedRatio = readSetting('split-ratio');
+            const storedDirection = readSetting('split-direction');
+            if (storedRatio) savedRatio = Number(storedRatio);
+            if (
+              storedDirection &&
+              ['horizontal', 'vertical', 'diagonal-tl-br', 'diagonal-tr-bl'].includes(
+                storedDirection,
+              )
+            ) {
+              savedDirection = storedDirection as SplitDirection;
+            }
+          }
+
+          // Restore brush, tool, and zoom settings (always)
+          let savedBrushRadius = initialEditorState.brushRadius;
+          let savedBrushStrength = initialEditorState.brushStrength;
+          let savedBlurType = initialEditorState.blurType as string;
+          let savedActiveTool = initialEditorState.activeTool as string;
+          let savedZoom = 100;
+
+          const storedRadius = readSetting('brush-radius');
+          const storedStrength = readSetting('brush-strength');
+          const storedBlurType = readSetting('blur-type');
+          const storedTool = readSetting('active-tool');
+          const storedZoom = readSetting('zoom');
+
+          if (storedRadius) savedBrushRadius = Number(storedRadius);
+          if (storedStrength) savedBrushStrength = Number(storedStrength);
+          if (storedBlurType && ['normal', 'pixelated'].includes(storedBlurType))
+            savedBlurType = storedBlurType;
+          if (storedTool && ['select', 'blur'].includes(storedTool)) savedActiveTool = storedTool;
+          if (storedZoom) savedZoom = Math.max(10, Math.min(500, Number(storedZoom)));
+
+          const newState: EditorState = {
+            ...initialEditorState,
+            image1,
+            image2,
+            splitRatio: image2 ? savedRatio : initialEditorState.splitRatio,
+            splitDirection: image2 ? savedDirection : initialEditorState.splitDirection,
+            brushRadius: savedBrushRadius,
+            brushStrength: savedBrushStrength,
+            blurType: savedBlurType as BlurType,
+            activeTool: savedActiveTool as ActiveTool,
+            imageWidth: img.naturalWidth,
+            imageHeight: img.naturalHeight,
+            zoom: savedZoom,
+            panX: 0,
+            panY: 0,
+          };
+          setState(newState);
+          const entry = getHistoryEntry(newState);
+          setHistory([entry]);
+          setHistoryIndex(0);
+          setIsEditing(true);
+        };
+        img.src = image1;
+      };
+      void initializeEditor();
+    },
+    [classifyPair, lightImageSide, orderBySidePreference, readSetting],
   );
 
   // Drawing handlers
@@ -298,23 +415,19 @@ export default function App() {
     [state, pushHistory],
   );
 
-  const handleSwapImages = useCallback(() => {
-    const newState = {
-      ...state,
-      image1: state.image2,
-      image2: state.image1,
-    };
-    setState(newState);
-    pushHistory(newState);
-  }, [state, pushHistory]);
-
   const handleAddSecondImage = useCallback(
     (dataUrl: string) => {
-      const newState = {...state, image2: dataUrl};
-      setState(newState);
-      pushHistory(newState);
+      const addSecondImage = async () => {
+        if (!state.image1) return;
+        const {lightImage, darkImage} = await classifyPair(state.image1, dataUrl);
+        const ordered = orderBySidePreference(lightImage, darkImage, lightImageSide);
+        const newState = {...state, image1: ordered.image1, image2: ordered.image2};
+        setState(newState);
+        pushHistory(newState);
+      };
+      void addSecondImage();
     },
-    [state, pushHistory],
+    [classifyPair, lightImageSide, orderBySidePreference, pushHistory, state],
   );
 
   const handleRemoveSecondImage = useCallback(() => {
@@ -322,6 +435,26 @@ export default function App() {
     setState(newState);
     pushHistory(newState);
   }, [state, pushHistory]);
+
+  const handleLightImageSideChange = useCallback(
+    (side: LightImageSide) => {
+      if (side === lightImageSide) return;
+
+      setLightImageSide(side);
+      persistSetting('light-image-side', side);
+
+      if (!state.image1 || !state.image2) return;
+
+      const lightImage = lightImageSide === 'left' ? state.image1 : state.image2;
+      const darkImage = lightImageSide === 'left' ? state.image2 : state.image1;
+      const ordered = orderBySidePreference(lightImage, darkImage, side);
+      const newState = {...state, image1: ordered.image1, image2: ordered.image2};
+
+      setState(newState);
+      pushHistory(newState);
+    },
+    [lightImageSide, orderBySidePreference, persistSetting, pushHistory, state],
+  );
 
   // Zoom + Pan
   const handleZoomChange = useCallback(
@@ -349,6 +482,7 @@ export default function App() {
       'brush-strength',
       'blur-type',
       'active-tool',
+      'light-image-side',
       'zoom',
     ];
     for (const key of keys) {
@@ -366,6 +500,7 @@ export default function App() {
       activeTool: initialEditorState.activeTool,
       zoom: 100,
     }));
+    setLightImageSide('left');
   }, []);
 
   // Reset to drop zone
@@ -411,7 +546,8 @@ export default function App() {
           onBlurTypeChange={handleBlurTypeChange}
           onSplitRatioChange={handleSplitRatioChange}
           onSplitDirectionChange={handleSplitDirectionChange}
-          onSwapImages={handleSwapImages}
+          lightImageSide={lightImageSide}
+          onLightImageSideChange={handleLightImageSideChange}
           onAddSecondImage={handleAddSecondImage}
           onRemoveSecondImage={handleRemoveSecondImage}
         />
