@@ -1,63 +1,63 @@
 @import 'tailwindcss';
 
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
+  --color-background: oklch(var(--background));
+  --color-foreground: oklch(var(--foreground));
+  --color-card: oklch(var(--card));
+  --color-card-foreground: oklch(var(--card-foreground));
+  --color-popover: oklch(var(--popover));
+  --color-popover-foreground: oklch(var(--popover-foreground));
+  --color-primary: oklch(var(--primary));
+  --color-primary-foreground: oklch(var(--primary-foreground));
+  --color-secondary: oklch(var(--secondary));
+  --color-secondary-foreground: oklch(var(--secondary-foreground));
+  --color-muted: oklch(var(--muted));
+  --color-muted-foreground: oklch(var(--muted-foreground));
+  --color-accent: oklch(var(--accent));
+  --color-accent-foreground: oklch(var(--accent-foreground));
+  --color-destructive: oklch(var(--destructive));
+  --color-destructive-foreground: oklch(var(--destructive-foreground));
+  --color-border: oklch(var(--border));
+  --color-input: oklch(var(--input));
+  --color-ring: oklch(var(--ring));
 }
 
 :root {
-  --background: 220 14% 10%;
-  --foreground: 210 20% 95%;
-  --card: 220 14% 13%;
-  --card-foreground: 210 20% 95%;
-  --popover: 220 14% 13%;
-  --popover-foreground: 210 20% 95%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 220 14% 18%;
-  --secondary-foreground: 210 20% 85%;
-  --muted: 220 14% 16%;
-  --muted-foreground: 215 16% 55%;
-  --accent: 217 91% 60%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 220 13% 20%;
-  --input: 220 13% 20%;
-  --ring: 217 91% 60%;
-  --chart-1: 217 91% 60%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
-  --radius: 0.5rem;
-  --sidebar-background: 220 14% 8%;
-  --sidebar-foreground: 210 20% 85%;
-  --sidebar-primary: 217 91% 60%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 14% 14%;
-  --sidebar-accent-foreground: 210 20% 90%;
-  --sidebar-border: 220 13% 18%;
-  --sidebar-ring: 217 91% 60%;
-  --editor-surface: 220 14% 12%;
-  --editor-canvas-bg: 220 14% 6%;
+  --background: 17% 0.018 244;
+  --foreground: 95% 0.02 221;
+  --card: 22% 0.024 244;
+  --card-foreground: 95% 0.02 221;
+  --popover: 20% 0.022 244;
+  --popover-foreground: 95% 0.02 221;
+  --primary: 78.9% 0.154 211.53;
+  --primary-foreground: 16% 0.03 235;
+  --secondary: 28% 0.03 244;
+  --secondary-foreground: 93% 0.018 222;
+  --muted: 25% 0.018 244;
+  --muted-foreground: 73% 0.02 228;
+  --accent: 35% 0.08 214;
+  --accent-foreground: 96% 0.02 220;
+  --destructive: 67% 0.21 28;
+  --destructive-foreground: 15% 0.02 25;
+  --border: 62% 0.03 227;
+  --input: 35% 0.02 242;
+  --ring: 78.9% 0.154 211.53;
+  --chart-1: 78.9% 0.154 211.53;
+  --chart-2: 74% 0.17 153;
+  --chart-3: 72% 0.17 90;
+  --chart-4: 70% 0.19 306;
+  --chart-5: 72% 0.19 24;
+  --radius: 0rem;
+  --sidebar-background: 14% 0.016 244;
+  --sidebar-foreground: 92% 0.02 221;
+  --sidebar-primary: 78.9% 0.154 211.53;
+  --sidebar-primary-foreground: 16% 0.03 235;
+  --sidebar-accent: 28% 0.034 244;
+  --sidebar-accent-foreground: 94% 0.02 221;
+  --sidebar-border: 56% 0.03 227;
+  --sidebar-ring: 78.9% 0.154 211.53;
+  --editor-surface: 20% 0.02 244;
+  --editor-canvas-bg: 12% 0.014 244;
 }
 
 * {
@@ -65,5 +65,35 @@
 }
 
 body {
-  @apply bg-background text-foreground;
+  @apply bg-background text-foreground antialiased;
+  font-family:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  background-image:
+    linear-gradient(to right, oklch(var(--foreground) / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(var(--foreground) / 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+button,
+input,
+textarea,
+select {
+  border-radius: 0;
+}
+
+input,
+textarea,
+select {
+  border-width: 2px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.65);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.65),
+    0 0 0 2px oklch(var(--ring));
 }

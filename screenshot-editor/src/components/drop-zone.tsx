@@ -68,8 +68,8 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
     <div
       className="bg-background relative flex h-screen w-screen items-center justify-center"
       style={{
-        backgroundImage: `radial-gradient(circle, hsl(var(--foreground) / 0.12) 1px, transparent 1px)`,
-        backgroundSize: '24px 24px',
+        backgroundImage: `radial-gradient(circle, oklch(var(--foreground) / 0.15) 1px, transparent 1px)`,
+        backgroundSize: '20px 20px',
       }}>
       <button
         type="button"
@@ -77,14 +77,14 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative flex aspect-video w-full max-w-xl cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-all duration-200 ${
+        className={`relative flex aspect-video w-full max-w-xl cursor-pointer flex-col items-center justify-center border-4 border-dashed shadow-[10px_10px_0_0_rgba(0,0,0,0.72)] transition-all duration-200 ${
           isDragging
-            ? 'border-primary bg-primary/10 scale-[1.02]'
-            : 'border-border bg-card hover:border-muted-foreground hover:bg-secondary/50'
+            ? 'border-primary bg-primary/12 scale-[1.02]'
+            : 'border-border bg-card hover:border-primary hover:bg-secondary/70'
         } `}>
         <div className="text-muted-foreground flex flex-col items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="bg-secondary flex h-14 w-14 items-center justify-center rounded-lg">
+            <div className="bg-secondary border-border flex h-14 w-14 items-center justify-center border-2 shadow-[4px_4px_0_0_rgba(0,0,0,0.7)]">
               <Upload className="h-6 w-6" />
             </div>
           </div>

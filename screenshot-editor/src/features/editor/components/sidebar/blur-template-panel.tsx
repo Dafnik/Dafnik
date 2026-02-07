@@ -87,9 +87,9 @@ export function BlurTemplatePanel() {
 
   return (
     <aside
-      className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-l"
-      style={{background: 'hsl(var(--sidebar-background))'}}>
-      <div className="border-border flex items-center justify-between border-b p-4">
+      className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-l-2"
+      style={{background: 'oklch(var(--sidebar-background))'}}>
+      <div className="border-border flex items-center justify-between border-b-2 p-4">
         <h3 className="text-foreground text-sm font-semibold">Blur Templates</h3>
         <Button
           variant="ghost"
@@ -100,14 +100,14 @@ export function BlurTemplatePanel() {
         </Button>
       </div>
 
-      <div className="border-border border-b p-4">
+      <div className="border-border border-b-2 p-4">
         <Label className="text-muted-foreground mb-2 block text-xs">Template Name</Label>
         <input
           type="text"
           value={templateName}
           onChange={(event) => setTemplateName(event.target.value)}
           placeholder="e.g. Faces"
-          className="bg-secondary text-foreground border-border focus:ring-primary placeholder:text-muted-foreground h-8 w-full rounded-md border px-2 text-xs outline-none focus:ring-1"
+          className="bg-secondary text-foreground border-border focus:ring-primary placeholder:text-muted-foreground h-8 w-full border-2 px-2 text-xs outline-none focus:ring-1"
         />
 
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -137,7 +137,7 @@ export function BlurTemplatePanel() {
         </div>
 
         {confirmDelete && selectedTemplateId && (
-          <div className="border-border mt-3 rounded-md border p-2">
+          <div className="border-border mt-3 border-2 p-2">
             <p className="text-muted-foreground text-[11px]">
               Delete selected template permanently?
             </p>
@@ -189,7 +189,7 @@ export function BlurTemplatePanel() {
                       handleTemplateLoad(template.id);
                     }
                   }}
-                  className={`border-border w-full rounded-md border px-2 py-2 text-left transition-colors ${
+                  className={`border-border w-full border-2 px-2 py-2 text-left shadow-[2px_2px_0_0_rgba(0,0,0,0.65)] transition-colors ${
                     selected
                       ? 'bg-primary/15 border-primary'
                       : 'bg-secondary/40 hover:bg-secondary border-border'

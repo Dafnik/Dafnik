@@ -44,12 +44,12 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
     <div
       ref={containerRef}
       className="relative flex-1 overflow-hidden"
-      style={{background: 'hsl(var(--editor-canvas-bg))'}}>
+      style={{background: 'oklch(var(--editor-canvas-bg))'}}>
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: `radial-gradient(circle, hsl(var(--foreground) / 0.12) 1px, transparent 1px)`,
-          backgroundSize: '24px 24px',
+          backgroundImage: `radial-gradient(circle, oklch(var(--foreground) / 0.14) 1px, transparent 1px)`,
+          backgroundSize: '20px 20px',
         }}
       />
 
@@ -68,7 +68,7 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
           }}>
           <canvas
             ref={canvasRef}
-            className="block shadow-2xl"
+            className="border-foreground block border-4 shadow-[8px_8px_0_0_rgba(0,0,0,0.72)]"
             style={{
               width: '100%',
               height: '100%',

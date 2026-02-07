@@ -61,17 +61,17 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
 
   return (
     <aside
-      className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r"
-      style={{background: 'hsl(var(--sidebar-background))'}}>
-      <div className="border-border border-b p-4">
+      className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r-2"
+      style={{background: 'oklch(var(--sidebar-background))'}}>
+      <div className="border-border border-b-2 p-4">
         <Label className="text-muted-foreground mb-2 block text-xs">Tool</Label>
         <div className="flex gap-1">
           <button
             type="button"
             onClick={() => setActiveTool('select')}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
               activeTool === 'select'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
                 : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}>
             <MousePointer2 className="h-3.5 w-3.5" />
@@ -80,9 +80,9 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
           <button
             type="button"
             onClick={() => setActiveTool('blur')}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
               activeTool === 'blur'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
                 : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}>
             <Droplets className="h-3.5 w-3.5" />
@@ -92,7 +92,7 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
       </div>
 
       <div
-        className={`border-border border-b p-4 transition-opacity ${activeTool !== 'blur' ? 'pointer-events-none opacity-40' : ''}`}>
+        className={`border-border border-b-2 p-4 transition-opacity ${activeTool !== 'blur' ? 'pointer-events-none opacity-40' : ''}`}>
         <div className="mb-4 flex items-center gap-2">
           <div className="flex items-center gap-2">
             <Droplets className="text-primary h-4 w-4" />
@@ -176,7 +176,7 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
         </div>
       </div>
 
-      <div className="border-border border-b p-4">
+      <div className="border-border border-b-2 p-4">
         <div className="mb-4 flex items-center gap-2">
           <SplitSquareVertical className="text-primary h-4 w-4" />
           <h3 className="text-foreground text-sm font-semibold">Split View</h3>

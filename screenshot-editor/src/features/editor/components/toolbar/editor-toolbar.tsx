@@ -60,16 +60,16 @@ export function EditorToolbar() {
 
   return (
     <header
-      className="border-border flex h-11 flex-shrink-0 items-center justify-between border-b px-3"
-      style={{background: 'hsl(var(--sidebar-background))'}}>
+      className="border-border flex h-12 flex-shrink-0 items-center justify-between border-b-2 px-3"
+      style={{background: 'oklch(var(--sidebar-background))'}}>
       <div className="flex items-center gap-2">
-        <div className="bg-primary flex h-6 w-6 items-center justify-center rounded">
-          <span className="text-primary-foreground text-xs font-bold">S</span>
+        <div className="bg-primary border-foreground flex h-7 w-7 items-center justify-center border-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]">
+          <span className="text-primary-foreground text-xs font-black">S</span>
         </div>
-        <span className="text-foreground hidden text-sm font-semibold sm:block">
+        <span className="text-foreground hidden text-sm font-black tracking-wider uppercase sm:block">
           Screenshot Editor
         </span>
-        <div className="bg-border mx-1 h-5 w-px" />
+        <div className="bg-border mx-1 h-6 w-0.5" />
 
         <Button
           variant="ghost"
@@ -158,7 +158,7 @@ export function EditorToolbar() {
           <SquareLibrary className="h-3.5 w-3.5" />
           Template
         </Button>
-        <div className="bg-border mx-1 h-5 w-px" />
+        <div className="bg-border mx-1 h-6 w-0.5" />
         <Button size="sm" className="h-7 px-3 text-xs" onClick={openExportModal}>
           <Download className="mr-1.5 h-3 w-3" />
           Export

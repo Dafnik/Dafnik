@@ -116,13 +116,13 @@ export function ExportModal({canvasRef}: ExportModalProps) {
         aria-label="Close export modal"
       />
 
-      <div className="bg-card border-border relative w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-2xl">
-        <div className="border-border flex items-center justify-between border-b px-5 py-4">
+      <div className="bg-card border-border relative w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden border-4 shadow-[10px_10px_0_0_rgba(0,0,0,0.75)]">
+        <div className="border-border flex items-center justify-between border-b-2 px-5 py-4">
           <h2 className="text-foreground text-sm font-semibold">Export Image</h2>
           <button
             type="button"
             onClick={closeExportModal}
-            className="text-muted-foreground hover:text-foreground hover:bg-secondary flex h-7 w-7 items-center justify-center rounded-md transition-colors">
+            className="text-muted-foreground hover:text-foreground hover:bg-secondary border-border flex h-7 w-7 items-center justify-center border-2 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -140,7 +140,7 @@ export function ExportModal({canvasRef}: ExportModalProps) {
               onKeyDown={(event) => {
                 if (event.key === 'Enter') handleExport();
               }}
-              className="bg-secondary text-foreground border-border focus:ring-primary placeholder:text-muted-foreground h-9 rounded-lg border px-3 text-sm outline-none focus:ring-1"
+              className="bg-secondary text-foreground border-border focus:ring-primary placeholder:text-muted-foreground h-9 border-2 px-3 text-sm outline-none focus:ring-1"
               placeholder="screenshot"
               autoFocus
             />
@@ -159,7 +159,7 @@ export function ExportModal({canvasRef}: ExportModalProps) {
                     key={format.id}
                     type="button"
                     onClick={() => toggleFormat(format.id)}
-                    className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-all ${
+                    className={`flex h-10 flex-1 items-center justify-center gap-1.5 border-2 text-sm font-semibold transition-all ${
                       selected
                         ? 'bg-primary/10 border-primary text-primary'
                         : 'bg-secondary border-border text-secondary-foreground hover:border-muted-foreground'
@@ -176,7 +176,7 @@ export function ExportModal({canvasRef}: ExportModalProps) {
           </div>
         </div>
 
-        <div className="border-border flex items-center justify-end gap-2 border-t px-5 py-4">
+        <div className="border-border flex items-center justify-end gap-2 border-t-2 px-5 py-4">
           <Button variant="ghost" size="sm" onClick={closeExportModal} className="h-8 text-xs">
             Cancel
           </Button>
