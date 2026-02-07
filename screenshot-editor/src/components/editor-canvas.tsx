@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {EditorState, BlurStroke} from '@/lib/editor-store';
 
 interface EditorCanvasProps {
@@ -12,6 +12,7 @@ interface EditorCanvasProps {
   onZoomChange: (zoom: number) => void;
   onPanChange: (panX: number, panY: number) => void;
   currentStroke: BlurStroke | null;
+  showBlurOutlines: boolean;
   onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
 }
 
@@ -24,6 +25,7 @@ export function EditorCanvas({
   onZoomChange,
   onPanChange,
   currentStroke,
+  showBlurOutlines,
   onCanvasReady,
 }: EditorCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,6 +36,39 @@ export function EditorCanvas({
   const lastPanPos = useRef({x: 0, y: 0});
   const animFrameRef = useRef<number>(0);
   const [cursorPos, setCursorPos] = useState<{x: number; y: number} | null>(null);
+  const canvasW = state.imageWidth || 800;
+  const canvasH = state.imageHeight || 600;
+  const allStrokes = useMemo(
+    () => (currentStroke ? [...state.blurStrokes, currentStroke] : state.blurStrokes),
+    [state.blurStrokes, currentStroke],
+  );
+  const blurOutlineRects = useMemo(() => {
+    return allStrokes.flatMap((stroke) => {
+      if (stroke.points.length === 0) return [];
+
+      let minX = Number.POSITIVE_INFINITY;
+      let minY = Number.POSITIVE_INFINITY;
+      let maxX = Number.NEGATIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+
+      for (const point of stroke.points) {
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+      }
+
+      const x = Math.max(0, minX - stroke.radius);
+      const y = Math.max(0, minY - stroke.radius);
+      const right = Math.min(canvasW, maxX + stroke.radius);
+      const bottom = Math.min(canvasH, maxY + stroke.radius);
+      const width = right - x;
+      const height = bottom - y;
+
+      if (width <= 0 || height <= 0) return [];
+      return [{x, y, width, height}];
+    });
+  }, [allStrokes, canvasW, canvasH]);
 
   // Expose canvas element to parent
   useEffect(() => {
@@ -370,10 +405,8 @@ export function EditorCanvas({
       ctx.drawImage(img1, 0, 0, w, h);
     }
 
-    // Apply blur strokes
-    const allStrokes = currentStroke ? [...state.blurStrokes, currentStroke] : state.blurStrokes;
     applyBlurToCanvas(ctx, allStrokes, w, h);
-  }, [state, currentStroke, applyBlurToCanvas, buildSplitClipPath, drawSplitLine]);
+  }, [state, allStrokes, applyBlurToCanvas, buildSplitClipPath, drawSplitLine]);
 
   // Re-render on state changes
   useEffect(() => {
@@ -470,9 +503,6 @@ export function EditorCanvas({
   }, [state.zoom, onZoomChange]);
 
   const scale = state.zoom / 100;
-  const canvasW = state.imageWidth || 800;
-  const canvasH = state.imageHeight || 600;
-
   const isBlurTool = state.activeTool === 'blur';
   const isSelectTool = state.activeTool === 'select';
 
@@ -526,6 +556,26 @@ export function EditorCanvas({
               if (isPanning) setIsPanning(false);
             }}
           />
+          {showBlurOutlines && blurOutlineRects.length > 0 && (
+            <svg
+              className="pointer-events-none absolute inset-0"
+              viewBox={`0 0 ${canvasW} ${canvasH}`}
+              preserveAspectRatio="none">
+              {blurOutlineRects.map((rect, index) => (
+                <rect
+                  key={`${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`}
+                  x={rect.x}
+                  y={rect.y}
+                  width={rect.width}
+                  height={rect.height}
+                  fill="none"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </svg>
+          )}
           {/* Brush cursor preview */}
           {cursorPos && !isPanning && isBlurTool && (
             <div

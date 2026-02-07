@@ -29,6 +29,8 @@ interface EditorSidebarProps {
   onBrushRadiusChange: (v: number) => void;
   onBrushStrengthChange: (v: number) => void;
   onBlurTypeChange: (t: BlurType) => void;
+  showBlurOutlines: boolean;
+  onShowBlurOutlinesChange: (enabled: boolean) => void;
   onSplitRatioChange: (v: number) => void;
   onSplitDirectionChange: (d: SplitDirection) => void;
   lightImageSide: LightImageSide;
@@ -43,6 +45,8 @@ export function EditorSidebar({
   onBrushRadiusChange,
   onBrushStrengthChange,
   onBlurTypeChange,
+  showBlurOutlines,
+  onShowBlurOutlinesChange,
   onSplitRatioChange,
   onSplitDirectionChange,
   lightImageSide,
@@ -135,6 +139,21 @@ export function EditorSidebar({
                 Pixelated
               </button>
             </div>
+          </div>
+
+          <div>
+            <Label className="text-muted-foreground mb-2 block text-xs">Outlines</Label>
+            <button
+              type="button"
+              aria-pressed={showBlurOutlines}
+              onClick={() => onShowBlurOutlinesChange(!showBlurOutlines)}
+              className={`flex w-full items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                showBlurOutlines
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}>
+              Show Blur Outlines
+            </button>
           </div>
 
           {/* Radius */}

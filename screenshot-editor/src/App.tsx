@@ -38,6 +38,7 @@ export default function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
+  const [showBlurOutlines, setShowBlurOutlines] = useState(false);
   const [showLightSelectorModal, setShowLightSelectorModal] = useState(false);
   const [selectorFirstImage, setSelectorFirstImage] = useState<string | null>(null);
   const [selectorSecondImage, setSelectorSecondImage] = useState<string | null>(null);
@@ -534,6 +535,7 @@ export default function App() {
       activeTool: initialEditorState.activeTool,
       zoom: 100,
     }));
+    setShowBlurOutlines(false);
     setLightImageSide('left');
   }, []);
 
@@ -546,6 +548,7 @@ export default function App() {
     setCurrentStroke(null);
     setIsEditing(false);
     setCanvasEl(null);
+    setShowBlurOutlines(false);
   }, []);
 
   // Export
@@ -578,6 +581,8 @@ export default function App() {
               onBrushRadiusChange={handleBrushRadiusChange}
               onBrushStrengthChange={handleBrushStrengthChange}
               onBlurTypeChange={handleBlurTypeChange}
+              showBlurOutlines={showBlurOutlines}
+              onShowBlurOutlinesChange={setShowBlurOutlines}
               onSplitRatioChange={handleSplitRatioChange}
               onSplitDirectionChange={handleSplitDirectionChange}
               lightImageSide={lightImageSide}
@@ -594,6 +599,7 @@ export default function App() {
               onZoomChange={handleZoomChange}
               onPanChange={handlePanChange}
               currentStroke={currentStroke}
+              showBlurOutlines={showBlurOutlines}
               onCanvasReady={setCanvasEl}
             />
           </div>
