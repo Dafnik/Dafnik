@@ -4,6 +4,7 @@ import {EditorCanvas} from '@/components/editor-canvas';
 import {EditorSidebar} from '@/components/editor-sidebar';
 import {EditorToolbar} from '@/components/editor-toolbar';
 import {ExportModal} from '@/components/export-modal';
+import {LightImageSelectorModal} from '@/components/light-image-selector-modal';
 import {
   type EditorState,
   type BlurStroke,
@@ -37,6 +38,12 @@ export default function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
+  const [showLightSelectorModal, setShowLightSelectorModal] = useState(false);
+  const [selectorFirstImage, setSelectorFirstImage] = useState<string | null>(null);
+  const [selectorSecondImage, setSelectorSecondImage] = useState<string | null>(null);
+  const pendingLightSelectionRef = useRef<
+    ((selection: 'first' | 'second' | 'cancel') => void) | null
+  >(null);
 
   // Push to history
   const pushHistory = useCallback(
@@ -185,6 +192,31 @@ export default function App() {
     });
   }, []);
 
+  const requestLightImageSelection = useCallback((firstImage: string, secondImage: string) => {
+    return new Promise<'first' | 'second' | 'cancel'>((resolve) => {
+      pendingLightSelectionRef.current = resolve;
+      setSelectorFirstImage(firstImage);
+      setSelectorSecondImage(secondImage);
+      setShowLightSelectorModal(true);
+    });
+  }, []);
+
+  const resolveLightSelection = useCallback((selection: 'first' | 'second' | 'cancel') => {
+    const resolve = pendingLightSelectionRef.current;
+    pendingLightSelectionRef.current = null;
+    setShowLightSelectorModal(false);
+    setSelectorFirstImage(null);
+    setSelectorSecondImage(null);
+    resolve?.(selection);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      pendingLightSelectionRef.current?.('cancel');
+      pendingLightSelectionRef.current = null;
+    };
+  }, []);
+
   const classifyPair = useCallback(
     async (firstImage: string, secondImage: string) => {
       let firstLuminance = 0;
@@ -196,19 +228,17 @@ export default function App() {
           computeAverageLuminance(secondImage),
         ]);
       } catch {
-        const firstIsLight = window.confirm(
-          "Couldn't confidently detect light vs dark. Is the first uploaded image the LIGHT screenshot?",
-        );
-        return firstIsLight
+        const selection = await requestLightImageSelection(firstImage, secondImage);
+        if (selection === 'cancel') return null;
+        return selection === 'first'
           ? {lightImage: firstImage, darkImage: secondImage}
           : {lightImage: secondImage, darkImage: firstImage};
       }
 
       if (Math.abs(firstLuminance - secondLuminance) < LUMINANCE_CONFIDENCE_THRESHOLD) {
-        const firstIsLight = window.confirm(
-          "Couldn't confidently detect light vs dark. Is the first uploaded image the LIGHT screenshot?",
-        );
-        return firstIsLight
+        const selection = await requestLightImageSelection(firstImage, secondImage);
+        if (selection === 'cancel') return null;
+        return selection === 'first'
           ? {lightImage: firstImage, darkImage: secondImage}
           : {lightImage: secondImage, darkImage: firstImage};
       }
@@ -217,7 +247,7 @@ export default function App() {
         ? {lightImage: firstImage, darkImage: secondImage}
         : {lightImage: secondImage, darkImage: firstImage};
     },
-    [computeAverageLuminance],
+    [computeAverageLuminance, requestLightImageSelection],
   );
 
   // Initial image load - restore all settings from localStorage
@@ -228,7 +258,9 @@ export default function App() {
         let image2 = inputImage2;
 
         if (inputImage2) {
-          const {lightImage, darkImage} = await classifyPair(inputImage1, inputImage2);
+          const classified = await classifyPair(inputImage1, inputImage2);
+          if (!classified) return;
+          const {lightImage, darkImage} = classified;
           const ordered = orderBySidePreference(lightImage, darkImage, lightImageSide);
           image1 = ordered.image1;
           image2 = ordered.image2;
@@ -419,7 +451,9 @@ export default function App() {
     (dataUrl: string) => {
       const addSecondImage = async () => {
         if (!state.image1) return;
-        const {lightImage, darkImage} = await classifyPair(state.image1, dataUrl);
+        const classified = await classifyPair(state.image1, dataUrl);
+        if (!classified) return;
+        const {lightImage, darkImage} = classified;
         const ordered = orderBySidePreference(lightImage, darkImage, lightImageSide);
         const newState = {...state, image1: ordered.image1, image2: ordered.image2};
         setState(newState);
@@ -519,55 +553,65 @@ export default function App() {
     setShowExportModal(true);
   }, []);
 
-  if (!isEditing) {
-    return <DropZone onImagesLoaded={handleImagesLoaded} />;
-  }
-
   return (
-    <div className="flex h-screen w-screen flex-col">
-      <EditorToolbar
-        zoom={state.zoom}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
-        onUndo={undo}
-        onRedo={redo}
-        onZoomChange={handleZoomChange}
-        onResetView={handleResetView}
-        onExport={handleExport}
-        onReset={handleReset}
-        onResetSettings={handleResetSettings}
+    <>
+      {!isEditing ? (
+        <DropZone onImagesLoaded={handleImagesLoaded} />
+      ) : (
+        <div className="flex h-screen w-screen flex-col">
+          <EditorToolbar
+            zoom={state.zoom}
+            canUndo={historyIndex > 0}
+            canRedo={historyIndex < history.length - 1}
+            onUndo={undo}
+            onRedo={redo}
+            onZoomChange={handleZoomChange}
+            onResetView={handleResetView}
+            onExport={handleExport}
+            onReset={handleReset}
+            onResetSettings={handleResetSettings}
+          />
+          <div className="flex flex-1 overflow-hidden">
+            <EditorSidebar
+              state={state}
+              onActiveToolChange={handleActiveToolChange}
+              onBrushRadiusChange={handleBrushRadiusChange}
+              onBrushStrengthChange={handleBrushStrengthChange}
+              onBlurTypeChange={handleBlurTypeChange}
+              onSplitRatioChange={handleSplitRatioChange}
+              onSplitDirectionChange={handleSplitDirectionChange}
+              lightImageSide={lightImageSide}
+              onLightImageSideChange={handleLightImageSideChange}
+              onAddSecondImage={handleAddSecondImage}
+              onRemoveSecondImage={handleRemoveSecondImage}
+            />
+            <EditorCanvas
+              state={state}
+              isDrawing={isDrawing}
+              onDrawStart={handleDrawStart}
+              onDrawMove={handleDrawMove}
+              onDrawEnd={handleDrawEnd}
+              onZoomChange={handleZoomChange}
+              onPanChange={handlePanChange}
+              currentStroke={currentStroke}
+              onCanvasReady={setCanvasEl}
+            />
+          </div>
+          <ExportModal
+            open={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            canvasRef={canvasEl}
+          />
+        </div>
+      )}
+      <LightImageSelectorModal
+        open={showLightSelectorModal}
+        firstImage={selectorFirstImage}
+        secondImage={selectorSecondImage}
+        onSelectFirst={() => resolveLightSelection('first')}
+        onSelectSecond={() => resolveLightSelection('second')}
+        onCancel={() => resolveLightSelection('cancel')}
       />
-      <div className="flex flex-1 overflow-hidden">
-        <EditorSidebar
-          state={state}
-          onActiveToolChange={handleActiveToolChange}
-          onBrushRadiusChange={handleBrushRadiusChange}
-          onBrushStrengthChange={handleBrushStrengthChange}
-          onBlurTypeChange={handleBlurTypeChange}
-          onSplitRatioChange={handleSplitRatioChange}
-          onSplitDirectionChange={handleSplitDirectionChange}
-          lightImageSide={lightImageSide}
-          onLightImageSideChange={handleLightImageSideChange}
-          onAddSecondImage={handleAddSecondImage}
-          onRemoveSecondImage={handleRemoveSecondImage}
-        />
-        <EditorCanvas
-          state={state}
-          isDrawing={isDrawing}
-          onDrawStart={handleDrawStart}
-          onDrawMove={handleDrawMove}
-          onDrawEnd={handleDrawEnd}
-          onZoomChange={handleZoomChange}
-          onPanChange={handlePanChange}
-          currentStroke={currentStroke}
-          onCanvasReady={setCanvasEl}
-        />
-      </div>
-      <ExportModal
-        open={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        canvasRef={canvasEl}
-      />
-    </div>
+    </>
   );
 }
