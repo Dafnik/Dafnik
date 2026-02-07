@@ -20,7 +20,7 @@ export default defineConfig({
     starlight({
       title: 'dafnik.me',
       logo: {
-        src: './src/assets/logo.png',
+        src: './public/logo.png',
       },
       plugins: [starlightThemeNova()],
       social: [
