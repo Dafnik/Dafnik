@@ -1,6 +1,17 @@
 import {useCallback, useEffect, useState} from 'react';
 import type {KeyboardEvent} from 'react';
-import {Download, ImagePlus, Minus, Plus, Redo2, RotateCcw, Settings2, Undo2} from 'lucide-react';
+import {
+  Download,
+  Fullscreen,
+  ImagePlus,
+  Minus,
+  Plus,
+  Redo2,
+  RotateCcw,
+  Settings2,
+  SquareLibrary,
+  Undo2,
+} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
@@ -38,6 +49,10 @@ export function EditorToolbar() {
     setZoom(100);
     setPan(0, 0);
   }, [setPan, setZoom]);
+
+  const handleCenterCanvas = useCallback(() => {
+    setPan(0, 0);
+  }, [setPan]);
 
   useEffect(() => {
     setZoomInput(String(zoom));
@@ -78,6 +93,16 @@ export function EditorToolbar() {
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
+          size="sm"
+          className="mr-1 h-7 gap-1.5 px-2.5 text-xs"
+          onClick={handleCenterCanvas}
+          title="Center canvas">
+          <Fullscreen className="h-3.5 w-3.5" />
+          Center
+        </Button>
+
+        <Button
+          variant="ghost"
           size="icon"
           className="h-7 w-7"
           onClick={() => setZoom(Math.max(10, zoom - 10))}
@@ -108,7 +133,12 @@ export function EditorToolbar() {
           <Plus className="h-3.5 w-3.5" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="ml-1 h-7 w-7" onClick={handleResetView}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={handleResetView}
+          title="Reset view">
           <RotateCcw className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -123,8 +153,9 @@ export function EditorToolbar() {
         <Button
           variant={showTemplatePanel ? 'default' : 'ghost'}
           size="sm"
-          className="h-7 px-2.5 text-xs"
+          className="h-7 gap-1.5 px-2.5 text-xs"
           onClick={toggleTemplatePanel}>
+          <SquareLibrary className="h-3.5 w-3.5" />
           Template
         </Button>
         <div className="bg-border mx-1 h-5 w-px" />
