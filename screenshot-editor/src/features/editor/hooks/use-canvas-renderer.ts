@@ -26,6 +26,7 @@ export function useCanvasRenderer({
   const img1Ref = useRef<HTMLImageElement | null>(null);
   const img2Ref = useRef<HTMLImageElement | null>(null);
   const animFrameRef = useRef<number>(0);
+  const renderCanvasRef = useRef<() => void>(() => {});
 
   const allStrokes = currentStroke ? [...blurStrokes, currentStroke] : blurStrokes;
 
@@ -341,36 +342,49 @@ export function useCanvasRenderer({
     splitDirection,
     splitRatio,
   ]);
+  renderCanvasRef.current = renderCanvas;
 
   useEffect(() => {
     if (!image1) {
       img1Ref.current = null;
+      renderCanvasRef.current();
       return;
     }
 
     const image = new Image();
     image.crossOrigin = 'anonymous';
+    let cancelled = false;
     image.onload = () => {
+      if (cancelled) return;
       img1Ref.current = image;
-      renderCanvas();
+      renderCanvasRef.current();
     };
     image.src = image1;
-  }, [image1, renderCanvas]);
+    return () => {
+      cancelled = true;
+    };
+  }, [image1]);
 
   useEffect(() => {
     if (!image2) {
       img2Ref.current = null;
+      renderCanvasRef.current();
       return;
     }
 
     const image = new Image();
     image.crossOrigin = 'anonymous';
+    let cancelled = false;
     image.onload = () => {
+      if (cancelled) return;
       img2Ref.current = image;
-      renderCanvas();
+      renderCanvasRef.current();
     };
     image.src = image2;
-  }, [image2, renderCanvas]);
+    return () => {
+      cancelled = true;
+    };
+  }, [image2]);
 
   useEffect(() => {
     if (animFrameRef.current) {

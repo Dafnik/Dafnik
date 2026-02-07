@@ -15,6 +15,28 @@ export interface BlurStroke {
   blurType: BlurType;
 }
 
+export interface NormalizedPoint {
+  xRatio: number;
+  yRatio: number;
+}
+
+export interface NormalizedBlurStroke {
+  points: NormalizedPoint[];
+  radiusRatio: number;
+  strength: number;
+  blurType: BlurType;
+}
+
+export interface BlurTemplate {
+  id: string;
+  name: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  strokes: NormalizedBlurStroke[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface HistorySnapshot {
   image1: string | null;
   image2: string | null;
@@ -62,6 +84,9 @@ export interface UiSlice {
   selectorFirstImage: string | null;
   selectorSecondImage: string | null;
   lightSelectorState: LightSelectorState;
+  showTemplatePanel: boolean;
+  selectedTemplateId: string | null;
+  blurTemplates: BlurTemplate[];
 }
 
 export interface HistorySlice {
@@ -108,6 +133,11 @@ export interface LightSelectorPayload {
 
 export type LightSelection = 'first' | 'second' | 'cancel';
 
+export interface ActionResult {
+  ok: boolean;
+  error?: string;
+}
+
 export interface EditorStoreActions {
   initializeEditor: (payload: InitializeEditorPayload) => void;
   resetProject: () => void;
@@ -129,6 +159,13 @@ export interface EditorStoreActions {
   finishStroke: () => void;
   cancelStroke: () => void;
   setShowBlurOutlines: (enabled: boolean) => void;
+  toggleTemplatePanel: () => void;
+  setTemplatePanelOpen: (open: boolean) => void;
+  setSelectedTemplate: (templateId: string | null) => void;
+  createBlurTemplate: (name: string) => ActionResult;
+  updateBlurTemplate: (templateId: string, name: string) => ActionResult;
+  deleteBlurTemplate: (templateId: string) => ActionResult;
+  loadBlurTemplate: (templateId: string) => ActionResult;
   openExportModal: () => void;
   closeExportModal: () => void;
   openLightSelector: (payload: LightSelectorPayload) => void;

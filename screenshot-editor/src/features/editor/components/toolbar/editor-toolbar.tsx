@@ -8,8 +8,10 @@ export function EditorToolbar() {
   const zoom = useEditorStore((state) => state.zoom);
   const canUndo = useEditorStore((state) => state.canUndo);
   const canRedo = useEditorStore((state) => state.canRedo);
+  const showTemplatePanel = useEditorStore((state) => state.showTemplatePanel);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
+  const toggleTemplatePanel = useEditorStore((state) => state.toggleTemplatePanel);
   const setZoom = useEditorStore((state) => state.setZoom);
   const setPan = useEditorStore((state) => state.setPan);
   const openExportModal = useEditorStore((state) => state.openExportModal);
@@ -117,6 +119,13 @@ export function EditorToolbar() {
         </Button>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={redo} disabled={!canRedo}>
           <Redo2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant={showTemplatePanel ? 'default' : 'ghost'}
+          size="sm"
+          className="h-7 px-2.5 text-xs"
+          onClick={toggleTemplatePanel}>
+          Template
         </Button>
         <div className="bg-border mx-1 h-5 w-px" />
         <Button size="sm" className="h-7 px-3 text-xs" onClick={openExportModal}>

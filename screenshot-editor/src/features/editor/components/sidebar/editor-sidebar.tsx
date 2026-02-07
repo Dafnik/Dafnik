@@ -94,8 +94,10 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
       <div
         className={`border-border border-b p-4 transition-opacity ${activeTool !== 'blur' ? 'pointer-events-none opacity-40' : ''}`}>
         <div className="mb-4 flex items-center gap-2">
-          <Droplets className="text-primary h-4 w-4" />
-          <h3 className="text-foreground text-sm font-semibold">Blur Settings</h3>
+          <div className="flex items-center gap-2">
+            <Droplets className="text-primary h-4 w-4" />
+            <h3 className="text-foreground text-sm font-semibold">Blur Settings</h3>
+          </div>
         </div>
 
         <div className="space-y-4">
