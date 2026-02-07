@@ -1,4 +1,5 @@
 import {useMemo, useRef} from 'react';
+import {getSplitHandlePoint} from '@/features/editor/lib/split-geometry';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {useCanvasRenderer} from '@/features/editor/hooks/use-canvas-renderer';
 import {useCanvasInteractions} from '@/features/editor/hooks/use-canvas-interactions';
@@ -15,6 +16,9 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
 
   const imageWidth = useEditorStore((state) => state.imageWidth);
   const imageHeight = useEditorStore((state) => state.imageHeight);
+  const image2 = useEditorStore((state) => state.image2);
+  const splitDirection = useEditorStore((state) => state.splitDirection);
+  const splitRatio = useEditorStore((state) => state.splitRatio);
   const zoom = useEditorStore((state) => state.zoom);
   const panX = useEditorStore((state) => state.panX);
   const panY = useEditorStore((state) => state.panY);
@@ -26,8 +30,17 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
 
   useCanvasRenderer({canvasRef, containerRef, onCanvasReady});
 
-  const {isPanning, cursorPos, handleMouseDown, handleMouseMove, handleMouseUp, handleMouseLeave} =
-    useCanvasInteractions({canvasRef, containerRef});
+  const {
+    isPanning,
+    isDraggingSplit,
+    isOverSplitHandle,
+    cursorPos,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerLeave,
+    handlePointerCancel,
+  } = useCanvasInteractions({canvasRef, containerRef});
 
   const scale = zoom / 100;
   const canvasWidth = imageWidth || 800;
@@ -39,6 +52,31 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
 
   const isBlurTool = activeTool === 'blur';
   const isSelectTool = activeTool === 'select';
+  const splitHandlePoint = useMemo(() => {
+    if (!image2) return null;
+    return getSplitHandlePoint(canvasWidth, canvasHeight, splitDirection, splitRatio / 100);
+  }, [canvasHeight, canvasWidth, image2, splitDirection, splitRatio]);
+
+  const splitCursor =
+    splitDirection === 'vertical'
+      ? 'ew-resize'
+      : splitDirection === 'horizontal'
+        ? 'ns-resize'
+        : splitDirection === 'diagonal-tl-br'
+          ? 'nwse-resize'
+          : 'nesw-resize';
+
+  const canvasCursor = isDraggingSplit
+    ? 'grabbing'
+    : image2 && isOverSplitHandle
+      ? splitCursor
+      : isPanning
+        ? 'grabbing'
+        : isSelectTool
+          ? 'grab'
+          : isBlurTool
+            ? 'crosshair'
+            : 'default';
 
   return (
     <div
@@ -46,12 +84,14 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
       className="relative flex-1 overflow-hidden"
       style={{
         background: 'oklch(var(--editor-canvas-bg))',
-        cursor: isPanning ? 'grabbing' : isSelectTool ? 'grab' : 'default',
+        cursor: canvasCursor,
+        touchAction: 'none',
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}>
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerLeave}
+      onPointerCancel={handlePointerCancel}>
       <div
         className="absolute inset-0"
         style={{
@@ -79,16 +119,25 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
             style={{
               width: '100%',
               height: '100%',
-              cursor: isPanning
-                ? 'grabbing'
-                : isSelectTool
-                  ? 'grab'
-                  : isBlurTool
-                    ? 'crosshair'
-                    : 'default',
+              cursor: canvasCursor,
               imageRendering: zoom > 200 ? 'pixelated' : 'auto',
             }}
           />
+
+          {image2 && splitHandlePoint ? (
+            <div
+              data-testid="split-drag-handle"
+              aria-hidden="true"
+              className="border-foreground bg-primary pointer-events-none absolute border-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.7)]"
+              style={{
+                width: 14,
+                height: 14,
+                left: splitHandlePoint.x * scale,
+                top: splitHandlePoint.y * scale,
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
+          ) : null}
 
           <BlurOutlineOverlay
             visible={showBlurOutlines}

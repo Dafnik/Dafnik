@@ -1,7 +1,8 @@
 import {useCallback, useEffect, useRef} from 'react';
 import type {RefObject} from 'react';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
-import type {BlurStroke} from '@/features/editor/state/types';
+import type {BlurStroke, SplitDirection} from '@/features/editor/state/types';
+import {getSplitLineSegment} from '@/features/editor/lib/split-geometry';
 
 interface UseCanvasRendererOptions {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -225,61 +226,17 @@ export function useCanvasRenderer({
       ctx: CanvasRenderingContext2D,
       width: number,
       height: number,
-      direction: string,
+      direction: SplitDirection,
       ratio: number,
     ) => {
+      const segment = getSplitLineSegment(width, height, direction, ratio);
+
       ctx.save();
       ctx.strokeStyle = 'rgba(255,255,255,0.6)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-
-      if (direction === 'horizontal') {
-        ctx.moveTo(0, height * ratio);
-        ctx.lineTo(width, height * ratio);
-      } else if (direction === 'vertical') {
-        ctx.moveTo(width * ratio, 0);
-        ctx.lineTo(width * ratio, height);
-      } else if (direction === 'diagonal-tl-br') {
-        const topX = width * ratio * 2;
-        const botX = width * (ratio * 2 - 1);
-        const clampedTopX = Math.max(0, Math.min(width, topX));
-        const clampedBotX = Math.max(0, Math.min(width, botX));
-        let startX = clampedTopX;
-        let startY = 0;
-        let endX = clampedBotX;
-        let endY = height;
-
-        if (topX > width) {
-          startX = width;
-          startY = height * ((topX - width) / (topX - botX));
-        }
-        if (botX < 0) {
-          endX = 0;
-          endY = height * (topX / (topX - botX));
-        }
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-      } else {
-        const topX = width * (1 - ratio * 2);
-        const botX = width * (2 - ratio * 2);
-        const clampedTopX = Math.max(0, Math.min(width, topX));
-        const clampedBotX = Math.max(0, Math.min(width, botX));
-        let startX = clampedTopX;
-        let startY = 0;
-        let endX = clampedBotX;
-        let endY = height;
-
-        if (topX < 0) {
-          startX = 0;
-          startY = height * (-topX / (botX - topX));
-        }
-        if (botX > width) {
-          endX = width;
-          endY = height * ((width - topX) / (botX - topX));
-        }
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-      }
+      ctx.moveTo(segment.start.x, segment.start.y);
+      ctx.lineTo(segment.end.x, segment.end.y);
 
       ctx.stroke();
       ctx.restore();
