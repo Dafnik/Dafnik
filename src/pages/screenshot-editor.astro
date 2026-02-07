@@ -1,0 +1,27 @@
+---
+import App from '../../screenshot-editor/src/App';
+import '../../screenshot-editor/src/styles.css';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Screenshot Editor</title>
+  </head>
+  <body>
+    <App client:only="react" />
+  </body>
+</html>
+
+<style is:global>
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    overflow: hidden;
+  }
+</style>
