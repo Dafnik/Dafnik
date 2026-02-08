@@ -52,6 +52,7 @@ const baseState = {
   currentStroke: null,
   isEditing: false,
   showExportModal: false,
+  showShortcutsModal: false,
   showLightSelectorModal: false,
   selectorFirstImage: null,
   selectorSecondImage: null,
@@ -86,6 +87,7 @@ export const useEditorStore = create<EditorStoreState>()(
           panX: 0,
           panY: 0,
           showExportModal: false,
+          showShortcutsModal: false,
           showLightSelectorModal: false,
           selectorFirstImage: null,
           selectorSecondImage: null,
@@ -109,6 +111,7 @@ export const useEditorStore = create<EditorStoreState>()(
           currentStroke: null,
           isEditing: false,
           showExportModal: false,
+          showShortcutsModal: false,
           showLightSelectorModal: false,
           selectorFirstImage: null,
           selectorSecondImage: null,
@@ -386,6 +389,9 @@ export const useEditorStore = create<EditorStoreState>()(
 
       openExportModal: () => set({showExportModal: true}),
       closeExportModal: () => set({showExportModal: false}),
+      openShortcutsModal: () => set({showShortcutsModal: true}),
+      closeShortcutsModal: () => set({showShortcutsModal: false}),
+      toggleShortcutsModal: () => set((state) => ({showShortcutsModal: !state.showShortcutsModal})),
 
       openLightSelector: ({firstImage, secondImage}) =>
         set({

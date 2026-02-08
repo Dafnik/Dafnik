@@ -13,6 +13,7 @@ import {
   Undo2,
 } from 'lucide-react';
 import {Button} from '@/components/ui/button';
+import {confirmResetProject} from '@/features/editor/lib/confirm-reset-project';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 export function EditorToolbar() {
@@ -54,6 +55,11 @@ export function EditorToolbar() {
     setPan(0, 0);
   }, [setPan]);
 
+  const handleNewProject = useCallback(() => {
+    if (!confirmResetProject()) return;
+    resetProject();
+  }, [resetProject]);
+
   useEffect(() => {
     setZoomInput(String(zoom));
   }, [zoom]);
@@ -75,7 +81,8 @@ export function EditorToolbar() {
           variant="ghost"
           size="sm"
           className="h-7 gap-1.5 px-2.5 text-xs"
-          onClick={resetProject}>
+          onClick={handleNewProject}
+          title="New project (Ctrl+N)">
           <ImagePlus className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">New</span>
         </Button>

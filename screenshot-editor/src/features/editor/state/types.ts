@@ -80,6 +80,7 @@ export type LightSelectorState = 'idle' | 'awaitingSelection' | 'resolved' | 'ca
 export interface UiSlice {
   isEditing: boolean;
   showExportModal: boolean;
+  showShortcutsModal: boolean;
   showLightSelectorModal: boolean;
   selectorFirstImage: string | null;
   selectorSecondImage: string | null;
@@ -168,6 +169,9 @@ export interface EditorStoreActions {
   loadBlurTemplate: (templateId: string) => ActionResult;
   openExportModal: () => void;
   closeExportModal: () => void;
+  openShortcutsModal: () => void;
+  closeShortcutsModal: () => void;
+  toggleShortcutsModal: () => void;
   openLightSelector: (payload: LightSelectorPayload) => void;
   resolveLightSelector: (selection: LightSelection) => void;
   addSecondImage: (image: string) => void;

@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {EditorCanvasRoot} from '@/features/editor/components/canvas/editor-canvas-root';
 import {ExportModal} from '@/features/editor/components/modals/export-modal';
 import {LightImageSelectorModal} from '@/features/editor/components/modals/light-image-selector-modal';
+import {ShortcutsModal} from '@/features/editor/components/modals/shortcuts-modal';
 import {BlurTemplatePanel} from '@/features/editor/components/sidebar/blur-template-panel';
 import {EditorSidebar} from '@/features/editor/components/sidebar/editor-sidebar';
 import {EditorToolbar} from '@/features/editor/components/toolbar/editor-toolbar';
@@ -34,6 +35,7 @@ export function EditorLayout({
       </div>
 
       <ExportModal canvasRef={canvasEl} />
+      <ShortcutsModal />
       <LightImageSelectorModal
         onSelectFirst={onSelectFirstLightImage}
         onSelectSecond={onSelectSecondLightImage}

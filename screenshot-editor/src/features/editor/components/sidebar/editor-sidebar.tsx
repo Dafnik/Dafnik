@@ -6,6 +6,7 @@ import {
   Droplets,
   Grid3X3,
   ImageIcon,
+  Keyboard,
   MousePointer2,
   Slash,
   SplitSquareVertical,
@@ -43,6 +44,7 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
   const setLightImageSide = useEditorStore((state) => state.setLightImageSide);
   const removeSecondImage = useEditorStore((state) => state.removeSecondImage);
   const setShowBlurOutlines = useEditorStore((state) => state.setShowBlurOutlines);
+  const openShortcutsModal = useEditorStore((state) => state.openShortcutsModal);
 
   const handleFileSelect = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -280,39 +282,19 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
       </div>
 
       <div className="mt-auto p-4">
-        <h3 className="text-muted-foreground mb-2 text-xs font-semibold">Shortcuts</h3>
-        <div className="text-muted-foreground space-y-1 text-[10px]">
-          <div className="flex justify-between">
-            <span>Undo</span>
-            <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
-              Ctrl+Z
-            </kbd>
-          </div>
-          <div className="flex justify-between">
-            <span>Redo</span>
-            <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
-              Ctrl+Y
-            </kbd>
-          </div>
-          <div className="flex justify-between">
-            <span>Pan</span>
-            <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
-              Alt+Drag
-            </kbd>
-          </div>
-          <div className="flex justify-between">
-            <span>Zoom</span>
-            <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
-              Scroll
-            </kbd>
-          </div>
-          <div className="flex justify-between">
-            <span>Toggle outlines</span>
-            <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
-              Ctrl+D
-            </kbd>
-          </div>
-        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={openShortcutsModal}
+          className="w-full justify-between text-xs">
+          <span className="flex items-center gap-1.5">
+            <Keyboard className="h-3.5 w-3.5" />
+            Shortcuts
+          </span>
+          <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono text-[10px]">
+            Ctrl+/
+          </kbd>
+        </Button>
       </div>
 
       <input
