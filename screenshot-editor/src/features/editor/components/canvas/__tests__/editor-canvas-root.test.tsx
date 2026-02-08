@@ -3,6 +3,42 @@ import {describe, expect, it} from 'vitest';
 import {EditorCanvasRoot} from '@/features/editor/components/canvas/editor-canvas-root';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
+class TestResizeObserver {
+  static instances: TestResizeObserver[] = [];
+  private readonly callback: ResizeObserverCallback;
+  private readonly observed = new Set<Element>();
+
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+    TestResizeObserver.instances.push(this);
+  }
+
+  observe(target: Element) {
+    this.observed.add(target);
+  }
+
+  unobserve(target: Element) {
+    this.observed.delete(target);
+  }
+
+  disconnect() {
+    this.observed.clear();
+  }
+
+  static flush() {
+    for (const instance of TestResizeObserver.instances) {
+      const entries = [...instance.observed].map((target) => ({target})) as ResizeObserverEntry[];
+      if (entries.length > 0) {
+        instance.callback(entries, instance as unknown as ResizeObserver);
+      }
+    }
+  }
+
+  static reset() {
+    TestResizeObserver.instances = [];
+  }
+}
+
 function mockCanvasRect(canvas: HTMLCanvasElement) {
   const rect = {
     x: 0,
@@ -133,5 +169,55 @@ describe('EditorCanvasRoot', () => {
     expect(splitRatio).toBe(80);
     expect(isDrawing).toBe(false);
     expect(currentStroke).toBeNull();
+  });
+
+  it('keeps canvas screen position stable when container width changes', () => {
+    const originalResizeObserver = globalThis.ResizeObserver;
+    try {
+      globalThis.ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+      TestResizeObserver.reset();
+
+      useEditorStore.setState({
+        imageWidth: 300,
+        imageHeight: 150,
+        panX: 0,
+        panY: 0,
+      });
+
+      const {container} = render(<EditorCanvasRoot />);
+      const backgroundContainer = container.firstElementChild as HTMLDivElement;
+      let containerRect = {
+        x: 0,
+        y: 0,
+        left: 100,
+        top: 50,
+        width: 1000,
+        height: 700,
+        right: 1100,
+        bottom: 750,
+        toJSON: () => ({}),
+      };
+
+      Object.defineProperty(backgroundContainer, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => containerRect,
+      });
+
+      TestResizeObserver.flush();
+
+      containerRect = {
+        ...containerRect,
+        width: 744,
+        right: 844,
+      };
+
+      TestResizeObserver.flush();
+
+      const {panX, panY} = useEditorStore.getState();
+      expect(panX).toBe(128);
+      expect(panY).toBe(0);
+    } finally {
+      globalThis.ResizeObserver = originalResizeObserver;
+    }
   });
 });

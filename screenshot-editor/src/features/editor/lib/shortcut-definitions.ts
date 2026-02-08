@@ -9,6 +9,7 @@ export type ShortcutId =
   | 'export'
   | 'new-project'
   | 'switch-tool'
+  | 'load-template-slot'
   | 'toggle-blur-type'
   | 'cycle-split-direction'
   | 'toggle-split-placement'
@@ -33,6 +34,7 @@ export const EDITOR_SHORTCUTS: ShortcutDefinition[] = [
   {id: 'export', label: 'Export', keys: 'MOD+E'},
   {id: 'new-project', label: 'New project', keys: 'MOD+N'},
   {id: 'switch-tool', label: 'Switch tool', keys: 'MOD+T'},
+  {id: 'load-template-slot', label: 'Load template slot', keys: 'MOD+1-9'},
   {id: 'toggle-blur-type', label: 'Toggle blur type', keys: 'MOD+B'},
   {id: 'cycle-split-direction', label: 'Cycle split direction', keys: 'MOD+D'},
   {id: 'toggle-split-placement', label: 'Split placement', keys: 'MOD+P'},

@@ -343,6 +343,35 @@ export const useEditorStore = create<EditorStoreState>()(
         return {ok: true} satisfies ActionResult;
       },
 
+      reorderBlurTemplates: (fromIndex, toIndex) => {
+        const state = get();
+        const {blurTemplates} = state;
+
+        if (
+          !Number.isInteger(fromIndex) ||
+          !Number.isInteger(toIndex) ||
+          fromIndex < 0 ||
+          toIndex < 0 ||
+          fromIndex >= blurTemplates.length ||
+          toIndex >= blurTemplates.length
+        ) {
+          return {ok: false, error: 'Template order index is invalid.'} satisfies ActionResult;
+        }
+
+        if (fromIndex === toIndex) {
+          return {ok: true} satisfies ActionResult;
+        }
+
+        const reorderedTemplates = [...blurTemplates];
+        const [movedTemplate] = reorderedTemplates.splice(fromIndex, 1);
+        reorderedTemplates.splice(toIndex, 0, movedTemplate);
+
+        saveBlurTemplates(reorderedTemplates);
+        set({blurTemplates: reorderedTemplates});
+
+        return {ok: true} satisfies ActionResult;
+      },
+
       deleteBlurTemplate: (templateId) => {
         const state = get();
         const exists = state.blurTemplates.some((template) => template.id === templateId);

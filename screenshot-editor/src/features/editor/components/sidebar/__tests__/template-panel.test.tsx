@@ -1,8 +1,9 @@
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {describe, expect, it} from 'vitest';
 import {EditorLayout} from '@/features/editor/components/layout/editor-layout';
 import {BlurTemplatePanel} from '@/features/editor/components/sidebar/blur-template-panel';
+import {formatShortcutKeys} from '@/features/editor/lib/shortcut-definitions';
 import type {BlurTemplate} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
@@ -85,5 +86,61 @@ describe('template panel integration', () => {
 
     await user.click(screen.getByRole('button', {name: 'Confirm'}));
     expect(screen.getByText('No templates yet.')).toBeInTheDocument();
+  });
+
+  it('reorders templates with drag and drop, updates slot labels, and preserves actions', async () => {
+    const user = userEvent.setup();
+
+    const secondTemplate: BlurTemplate = {
+      ...baseTemplate,
+      id: 'template-2',
+      name: 'Names',
+      updatedAt: '2026-02-08T00:00:00.000Z',
+    };
+
+    useEditorStore.setState({
+      blurTemplates: [baseTemplate, secondTemplate],
+      selectedTemplateId: null,
+      blurStrokes: [],
+      showTemplatePanel: true,
+      imageWidth: 100,
+      imageHeight: 100,
+    });
+
+    render(<BlurTemplatePanel />);
+
+    const firstCardBefore = screen.getByRole('button', {name: 'Load template Faces'});
+    const secondCardBefore = screen.getByRole('button', {name: 'Load template Names'});
+    const dataTransfer = {
+      setData: () => {},
+      getData: () => '',
+      effectAllowed: 'move',
+      dropEffect: 'move',
+    } as unknown as DataTransfer;
+
+    fireEvent.dragStart(secondCardBefore, {dataTransfer});
+    fireEvent.dragOver(firstCardBefore, {dataTransfer});
+    fireEvent.drop(firstCardBefore, {dataTransfer});
+    fireEvent.dragEnd(secondCardBefore, {dataTransfer});
+
+    expect(useEditorStore.getState().blurTemplates.map((template) => template.id)).toEqual([
+      'template-2',
+      'template-1',
+    ]);
+
+    const firstCardAfter = screen.getByRole('button', {name: 'Load template Names'});
+    const secondCardAfter = screen.getByRole('button', {name: 'Load template Faces'});
+
+    expect(within(firstCardAfter).getByText('#1')).toBeInTheDocument();
+    expect(within(firstCardAfter).getByText(formatShortcutKeys('MOD+1'))).toBeInTheDocument();
+    expect(within(secondCardAfter).getByText('#2')).toBeInTheDocument();
+    expect(within(secondCardAfter).getByText(formatShortcutKeys('MOD+2'))).toBeInTheDocument();
+
+    await user.click(firstCardAfter);
+    expect(useEditorStore.getState().selectedTemplateId).toBe('template-2');
+    expect(useEditorStore.getState().blurStrokes).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', {name: 'Delete template Names'}));
+    expect(screen.getByText('Delete selected template permanently?')).toBeInTheDocument();
   });
 });

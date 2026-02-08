@@ -1,4 +1,4 @@
-import {useMemo, useRef} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import {getSplitHandlePoint} from '@/features/editor/lib/split-geometry';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {useCanvasRenderer} from '@/features/editor/hooks/use-canvas-renderer';
@@ -27,6 +27,7 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
   const showBlurOutlines = useEditorStore((state) => state.showBlurOutlines);
   const blurStrokes = useEditorStore((state) => state.blurStrokes);
   const currentStroke = useEditorStore((state) => state.currentStroke);
+  const setPan = useEditorStore((state) => state.setPan);
 
   useCanvasRenderer({canvasRef, containerRef, onCanvasReady});
 
@@ -45,6 +46,7 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
   const scale = zoom / 100;
   const canvasWidth = imageWidth || 800;
   const canvasHeight = imageHeight || 600;
+  const panRef = useRef({x: panX, y: panY});
   const allStrokes = useMemo(
     () => (currentStroke ? [...blurStrokes, currentStroke] : blurStrokes),
     [blurStrokes, currentStroke],
@@ -77,6 +79,48 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
           : isBlurTool
             ? 'crosshair'
             : 'default';
+
+  useEffect(() => {
+    panRef.current = {x: panX, y: panY};
+  }, [panX, panY]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let prevCenter: {x: number; y: number} | null = null;
+    const measureCenter = () => {
+      const rect = container.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    };
+
+    const syncPanToContainerCenter = () => {
+      const nextCenter = measureCenter();
+      if (!prevCenter) {
+        prevCenter = nextCenter;
+        return;
+      }
+
+      const dx = prevCenter.x - nextCenter.x;
+      const dy = prevCenter.y - nextCenter.y;
+      prevCenter = nextCenter;
+
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+
+      const nextPanX = panRef.current.x + dx;
+      const nextPanY = panRef.current.y + dy;
+      panRef.current = {x: nextPanX, y: nextPanY};
+      setPan(nextPanX, nextPanY);
+    };
+
+    syncPanToContainerCenter();
+    const observer = new ResizeObserver(syncPanToContainerCenter);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [setPan]);
 
   return (
     <div

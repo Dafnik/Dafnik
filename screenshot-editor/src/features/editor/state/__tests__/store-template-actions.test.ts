@@ -1,5 +1,26 @@
 import {describe, expect, it} from 'vitest';
+import {BLUR_TEMPLATES_STORAGE_KEY} from '@/features/editor/state/blur-templates-storage';
+import type {BlurTemplate} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
+
+function makeTemplate(id: string, name: string): BlurTemplate {
+  return {
+    id,
+    name,
+    sourceWidth: 100,
+    sourceHeight: 100,
+    strokes: [
+      {
+        points: [{xRatio: 0.2, yRatio: 0.2}],
+        radiusRatio: 0.1,
+        strength: 8,
+        blurType: 'normal',
+      },
+    ],
+    createdAt: '2026-02-07T00:00:00.000Z',
+    updatedAt: '2026-02-07T00:00:00.000Z',
+  };
+}
 
 describe('store template actions', () => {
   it('creates template and rejects duplicate name', () => {
@@ -51,6 +72,49 @@ describe('store template actions', () => {
     const deleted = store.getState().deleteBlurTemplate(templateId);
     expect(deleted.ok).toBe(true);
     expect(store.getState().blurTemplates).toHaveLength(0);
+  });
+
+  it('reorders templates and persists the updated order', () => {
+    const store = useEditorStore;
+    store.setState({
+      blurTemplates: [
+        makeTemplate('template-1', 'Faces'),
+        makeTemplate('template-2', 'Names'),
+        makeTemplate('template-3', 'Plates'),
+      ],
+      selectedTemplateId: 'template-2',
+    });
+
+    const result = store.getState().reorderBlurTemplates(0, 2);
+    expect(result.ok).toBe(true);
+    expect(store.getState().blurTemplates.map((template) => template.id)).toEqual([
+      'template-2',
+      'template-3',
+      'template-1',
+    ]);
+    expect(store.getState().selectedTemplateId).toBe('template-2');
+
+    const persisted = JSON.parse(localStorage.getItem(BLUR_TEMPLATES_STORAGE_KEY) ?? '[]') as {
+      id: string;
+    }[];
+    expect(persisted.map((template) => template.id)).toEqual([
+      'template-2',
+      'template-3',
+      'template-1',
+    ]);
+  });
+
+  it('keeps template order unchanged for same-index reorder', () => {
+    const store = useEditorStore;
+    store.setState({
+      blurTemplates: [makeTemplate('template-1', 'Faces'), makeTemplate('template-2', 'Names')],
+    });
+
+    const before = store.getState().blurTemplates.map((template) => template.id);
+    const result = store.getState().reorderBlurTemplates(1, 1);
+
+    expect(result.ok).toBe(true);
+    expect(store.getState().blurTemplates.map((template) => template.id)).toEqual(before);
   });
 
   it('loads template by replacing strokes and pushing history', () => {

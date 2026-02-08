@@ -49,6 +49,19 @@ function isSlashShortcut(event: KeyboardEvent): boolean {
   return event.code === 'Slash' || event.key === '/' || event.key === '?';
 }
 
+function getTemplateSlotIndex(event: KeyboardEvent): number | null {
+  const codeMatch = /^Digit([1-9])$/.exec(event.code);
+  if (codeMatch) {
+    return Number(codeMatch[1]) - 1;
+  }
+
+  if (/^[1-9]$/.test(event.key)) {
+    return Number(event.key) - 1;
+  }
+
+  return null;
+}
+
 function isTextInputType(type: string): boolean {
   return ['text', 'search', 'url', 'tel', 'password', 'email', 'number'].includes(type);
 }
@@ -103,6 +116,17 @@ export function useEditorShortcuts() {
       }
 
       if (!hasModifier || isTyping) return;
+
+      const templateSlotIndex = getTemplateSlotIndex(event);
+      if (templateSlotIndex !== null) {
+        event.preventDefault();
+        const template = store.blurTemplates[templateSlotIndex];
+        if (!template) return;
+
+        store.setTemplatePanelOpen(true);
+        store.loadBlurTemplate(template.id);
+        return;
+      }
 
       if (isLetterKey(event, 'z') && !event.shiftKey) {
         event.preventDefault();

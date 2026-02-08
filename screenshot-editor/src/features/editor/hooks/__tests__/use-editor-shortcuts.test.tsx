@@ -1,11 +1,35 @@
 import {fireEvent, render} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import {useEditorShortcuts} from '@/features/editor/hooks/use-editor-shortcuts';
+import type {BlurTemplate} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 function ShortcutsHarness() {
   useEditorShortcuts();
   return null;
+}
+
+function makeTemplate(
+  id: string,
+  name: string,
+  point: {xRatio: number; yRatio: number},
+): BlurTemplate {
+  return {
+    id,
+    name,
+    sourceWidth: 100,
+    sourceHeight: 100,
+    strokes: [
+      {
+        points: [point],
+        radiusRatio: 0.1,
+        strength: 8,
+        blurType: 'normal',
+      },
+    ],
+    createdAt: '2026-02-07T00:00:00.000Z',
+    updatedAt: '2026-02-07T00:00:00.000Z',
+  };
 }
 
 describe('useEditorShortcuts', () => {
@@ -87,6 +111,69 @@ describe('useEditorShortcuts', () => {
 
     fireEvent.keyDown(window, {key: '/', code: 'Slash', ctrlKey: true});
     expect(useEditorStore.getState().showShortcutsModal).toBe(false);
+  });
+
+  it('loads ordered template slot and opens template panel with Ctrl+2', () => {
+    useEditorStore.setState({
+      imageWidth: 100,
+      imageHeight: 100,
+      showTemplatePanel: false,
+      blurStrokes: [],
+      blurTemplates: [
+        makeTemplate('template-1', 'Faces', {xRatio: 0.1, yRatio: 0.1}),
+        makeTemplate('template-2', 'Names', {xRatio: 0.8, yRatio: 0.6}),
+      ],
+    });
+    render(<ShortcutsHarness />);
+
+    fireEvent.keyDown(window, {key: '2', code: 'Digit2', ctrlKey: true});
+
+    const state = useEditorStore.getState();
+    expect(state.showTemplatePanel).toBe(true);
+    expect(state.selectedTemplateId).toBe('template-2');
+    expect(state.blurStrokes[0].points[0].x).toBeCloseTo(80);
+    expect(state.blurStrokes[0].points[0].y).toBeCloseTo(60);
+  });
+
+  it('uses current template order for Ctrl+1 slot selection', () => {
+    useEditorStore.setState({
+      imageWidth: 100,
+      imageHeight: 100,
+      blurStrokes: [],
+      blurTemplates: [
+        makeTemplate('template-1', 'Faces', {xRatio: 0.1, yRatio: 0.1}),
+        makeTemplate('template-2', 'Names', {xRatio: 0.8, yRatio: 0.6}),
+      ],
+    });
+    useEditorStore.getState().reorderBlurTemplates(0, 1);
+    render(<ShortcutsHarness />);
+
+    fireEvent.keyDown(window, {key: '1', code: 'Digit1', ctrlKey: true});
+
+    expect(useEditorStore.getState().selectedTemplateId).toBe('template-2');
+  });
+
+  it('treats missing Ctrl+9 template slot as no-op while preventing default', () => {
+    useEditorStore.setState({
+      showTemplatePanel: false,
+      selectedTemplateId: null,
+      blurStrokes: [],
+      blurTemplates: [makeTemplate('template-1', 'Faces', {xRatio: 0.1, yRatio: 0.1})],
+    });
+    render(<ShortcutsHarness />);
+
+    const event = new KeyboardEvent('keydown', {
+      key: '9',
+      code: 'Digit9',
+      ctrlKey: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(useEditorStore.getState().showTemplatePanel).toBe(false);
+    expect(useEditorStore.getState().selectedTemplateId).toBeNull();
+    expect(useEditorStore.getState().blurStrokes).toHaveLength(0);
   });
 
   it('opens shortcuts modal with Ctrl+/ while text input is focused', () => {

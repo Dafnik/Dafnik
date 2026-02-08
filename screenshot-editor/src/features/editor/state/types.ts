@@ -165,6 +165,7 @@ export interface EditorStoreActions {
   setSelectedTemplate: (templateId: string | null) => void;
   createBlurTemplate: (name: string) => ActionResult;
   updateBlurTemplate: (templateId: string, name: string) => ActionResult;
+  reorderBlurTemplates: (fromIndex: number, toIndex: number) => ActionResult;
   deleteBlurTemplate: (templateId: string) => ActionResult;
   loadBlurTemplate: (templateId: string) => ActionResult;
   openExportModal: () => void;
