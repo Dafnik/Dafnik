@@ -1,10 +1,36 @@
 import React from 'react';
 
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {Upload, ImageIcon} from 'lucide-react';
 
 interface DropZoneProps {
   onImagesLoaded: (image1: string, image2: string | null) => void;
+}
+
+function normalizeKey(key: string): string {
+  return key.length === 1 ? key.toLowerCase() : key;
+}
+
+function isOpenUploadShortcut(event: KeyboardEvent): boolean {
+  return (
+    (event.ctrlKey || event.metaKey) && (normalizeKey(event.key) === 'u' || event.code === 'KeyU')
+  );
+}
+
+function isTypingElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+
+  const nearest = target.closest<HTMLElement>(
+    'input, textarea, select, [contenteditable=""], [contenteditable="true"]',
+  );
+  if (!nearest) return false;
+
+  if (nearest.isContentEditable) return true;
+  return (
+    nearest instanceof HTMLInputElement ||
+    nearest instanceof HTMLTextAreaElement ||
+    nearest instanceof HTMLSelectElement
+  );
 }
 
 export function DropZone({onImagesLoaded}: DropZoneProps) {
@@ -63,6 +89,19 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
     },
     [processFiles],
   );
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (!isOpenUploadShortcut(event)) return;
+      if (isTypingElement(event.target) || isTypingElement(document.activeElement)) return;
+
+      event.preventDefault();
+      fileInputRef.current?.click();
+    };
+
+    window.addEventListener('keydown', handleShortcut, true);
+    return () => window.removeEventListener('keydown', handleShortcut, true);
+  }, []);
 
   return (
     <div

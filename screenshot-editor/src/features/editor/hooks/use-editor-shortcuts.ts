@@ -177,6 +177,13 @@ export function useEditorShortcuts() {
         return;
       }
 
+      if (isLetterKey(event, 'p')) {
+        event.preventDefault();
+        const nextSide = store.lightImageSide === 'left' ? 'right' : 'left';
+        store.setLightImageSide(nextSide, {reorderImages: true});
+        return;
+      }
+
       if (isLetterKey(event, 'o')) {
         event.preventDefault();
         store.setShowBlurOutlines(!store.showBlurOutlines);

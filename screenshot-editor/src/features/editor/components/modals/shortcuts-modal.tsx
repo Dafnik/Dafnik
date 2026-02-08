@@ -1,24 +1,8 @@
 import {useEffect} from 'react';
 import {X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
+import {EDITOR_SHORTCUTS, formatShortcutKeys} from '@/features/editor/lib/shortcut-definitions';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
-
-const SHORTCUT_ROWS = [
-  {label: 'Shortcuts', keys: 'Ctrl+/'},
-  {label: 'Undo', keys: 'Ctrl+Z'},
-  {label: 'Redo', keys: 'Ctrl+Y'},
-  {label: 'Pan', keys: 'Alt+Drag'},
-  {label: 'Zoom', keys: 'Scroll'},
-  {label: 'Zoom +/-', keys: 'Ctrl+←/→'},
-  {label: 'Export', keys: 'Ctrl+E'},
-  {label: 'New project', keys: 'Ctrl+N'},
-  {label: 'Switch tool', keys: 'Ctrl+T'},
-  {label: 'Toggle blur type', keys: 'Ctrl+B'},
-  {label: 'Cycle split direction', keys: 'Ctrl+D'},
-  {label: 'Toggle outlines', keys: 'Ctrl+O'},
-  {label: 'Radius +/-', keys: 'Ctrl+R+←/→/J/K'},
-  {label: 'Strength +/-', keys: 'Ctrl+S+←/→/J/K'},
-];
 
 export function ShortcutsModal() {
   const open = useEditorStore((state) => state.showShortcutsModal);
@@ -67,11 +51,11 @@ export function ShortcutsModal() {
         </div>
 
         <div className="space-y-1 px-5 py-4 text-xs">
-          {SHORTCUT_ROWS.map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{row.label}</span>
+          {EDITOR_SHORTCUTS.map((shortcut) => (
+            <div key={shortcut.id} className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{shortcut.label}</span>
               <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
-                {row.keys}
+                {formatShortcutKeys(shortcut.keys)}
               </kbd>
             </div>
           ))}

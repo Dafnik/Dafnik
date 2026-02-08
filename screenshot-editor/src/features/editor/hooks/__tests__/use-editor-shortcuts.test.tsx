@@ -27,6 +27,17 @@ describe('useEditorShortcuts', () => {
     expect(useEditorStore.getState().splitDirection).toBe('diagonal-tl-br');
   });
 
+  it('toggles split placement with Ctrl+P', () => {
+    useEditorStore.setState({lightImageSide: 'left'});
+    render(<ShortcutsHarness />);
+
+    fireEvent.keyDown(window, {key: 'p', ctrlKey: true});
+    expect(useEditorStore.getState().lightImageSide).toBe('right');
+
+    fireEvent.keyDown(window, {key: 'p', ctrlKey: true});
+    expect(useEditorStore.getState().lightImageSide).toBe('left');
+  });
+
   it('adjusts blur radius with Ctrl+R + Arrow keys', () => {
     useEditorStore.setState({brushRadius: 20});
     render(<ShortcutsHarness />);
