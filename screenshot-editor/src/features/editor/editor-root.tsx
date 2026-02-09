@@ -8,15 +8,9 @@ import {
 } from '@/features/editor/lib/export-filename';
 import {classifyByLuminance} from '@/features/editor/services/image-classification';
 import {getImageDimensions} from '@/features/editor/services/file-loading';
+import {orderBySidePreference} from '@/features/editor/state/store/helpers';
 import {useEditorStore, useEditorStoreApi} from '@/features/editor/state/use-editor-store';
-import type {LightImageSide, LightSelection} from '@/features/editor/state/types';
-
-function orderBySidePreference(lightImage: string, darkImage: string, side: LightImageSide) {
-  if (side === 'left') {
-    return {image1: lightImage, image2: darkImage};
-  }
-  return {image1: darkImage, image2: lightImage};
-}
+import type {LightSelection} from '@/features/editor/state/types';
 
 export function EditorRoot() {
   useEditorShortcuts();

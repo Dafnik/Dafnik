@@ -1,74 +1,17 @@
 import {useCallback, useEffect, useMemo, useRef} from 'react';
-import type {ChangeEvent, ReactNode} from 'react';
-import {
-  ArrowLeftRight,
-  ArrowUpDown,
-  Droplets,
-  Hand,
-  Eye,
-  Grid3X3,
-  ImageIcon,
-  Keyboard,
-  MousePointer2,
-  RotateCcw,
-  Slash,
-  SplitSquareVertical,
-  Upload,
-} from 'lucide-react';
-import {Button} from '@/components/ui/button';
-import {Label} from '@/components/ui/label';
-import {Slider} from '@/components/ui/slider';
-import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
-import {
-  formatShortcutById,
-  formatShortcutTooltip,
-} from '@/features/editor/lib/shortcut-definitions';
-import type {BlurType, SplitDirection} from '@/features/editor/state/types';
+import type {ChangeEvent} from 'react';
+import {isOpenUploadShortcut, isTypingElement} from '@/features/editor/lib/keyboard';
+import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
+import type {BlurType} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
+import {BlurSettingsSection} from './editor-sidebar/blur-settings-section';
+import {ShortcutsSection} from './editor-sidebar/shortcuts-section';
+import {SplitViewSection} from './editor-sidebar/split-view-section';
+import {ToolSection} from './editor-sidebar/tool-section';
 
 interface EditorSidebarProps {
   onAddSecondImage: (dataUrl: string, fileName: string | null) => void;
   selectedStrokeIndices: number[];
-}
-
-interface ShortcutTooltipProps {
-  content: string;
-  children: ReactNode;
-}
-
-function ShortcutTooltip({content, children}: ShortcutTooltipProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent>{content}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function normalizeKey(key: string): string {
-  return key.length === 1 ? key.toLowerCase() : key;
-}
-
-function isOpenUploadShortcut(event: KeyboardEvent): boolean {
-  return (
-    (event.ctrlKey || event.metaKey) && (normalizeKey(event.key) === 'u' || event.code === 'KeyU')
-  );
-}
-
-function isTypingElement(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-
-  const nearest = target.closest<HTMLElement>(
-    'input, textarea, select, [contenteditable=""], [contenteditable="true"]',
-  );
-  if (!nearest) return false;
-
-  if (nearest.isContentEditable) return true;
-  return (
-    nearest instanceof HTMLInputElement ||
-    nearest instanceof HTMLTextAreaElement ||
-    nearest instanceof HTMLSelectElement
-  );
 }
 
 export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorSidebarProps) {
@@ -246,315 +189,53 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
     <aside
       className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r-2"
       style={{background: 'oklch(var(--sidebar-background))'}}>
-      <div className="border-border border-b-2 p-4">
-        <ShortcutTooltip content={switchToolTooltip}>
-          <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">Tool</Label>
-        </ShortcutTooltip>
-        <div data-testid="tool-grid" className="grid grid-cols-2 gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTool('drag')}
-            className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
-              activeTool === 'drag'
-                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}>
-            <Hand className="h-3.5 w-3.5" />
-            Drag
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTool('select')}
-            className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
-              activeTool === 'select'
-                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}>
-            <MousePointer2 className="h-3.5 w-3.5" />
-            Select
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTool('blur')}
-            className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
-              activeTool === 'blur'
-                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}>
-            <Droplets className="h-3.5 w-3.5" />
-            Blur Brush
-          </button>
-        </div>
-      </div>
+      <ToolSection
+        activeTool={activeTool}
+        switchToolTooltip={switchToolTooltip}
+        onSetActiveTool={setActiveTool}
+      />
 
-      <div className="border-border border-b-2 p-4">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Droplets className="text-primary h-4 w-4" />
-            <h3 className="text-foreground text-sm font-semibold">Blur Settings</h3>
-          </div>
-          <div className="flex items-center gap-1">
-            <ShortcutTooltip content={outlinesTooltip}>
-              <Button
-                type="button"
-                variant={outlinesTogglePressed ? 'default' : 'secondary'}
-                size="icon"
-                aria-label="Toggle blur outlines"
-                aria-pressed={outlinesTogglePressed}
-                disabled={outlinesForcedOn}
-                onClick={() => setShowBlurOutlines(!showBlurOutlines)}
-                className="h-7 w-7">
-                <Eye className="h-3.5 w-3.5" />
-              </Button>
-            </ShortcutTooltip>
-            <ShortcutTooltip content="Reset all blurs">
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                aria-label="Reset all blurs"
-                onClick={clearBlurStrokes}
-                className="h-7 w-7">
-                <RotateCcw className="h-3.5 w-3.5" />
-              </Button>
-            </ShortcutTooltip>
-          </div>
-        </div>
+      <BlurSettingsSection
+        blurTypeTooltip={blurTypeTooltip}
+        outlinesTooltip={outlinesTooltip}
+        radiusTooltip={radiusTooltip}
+        strengthTooltip={strengthTooltip}
+        outlinesTogglePressed={outlinesTogglePressed}
+        outlinesForcedOn={outlinesForcedOn}
+        showBlurOutlines={showBlurOutlines}
+        canEditBlurType={canEditBlurType}
+        canEditStrength={canEditStrength}
+        canEditRadius={canEditRadius}
+        displayedBlurType={displayedBlurType}
+        displayedStrength={displayedStrength}
+        brushRadius={brushRadius}
+        onToggleOutlines={() => setShowBlurOutlines(!showBlurOutlines)}
+        onClearBlurStrokes={clearBlurStrokes}
+        onBlurTypeChange={handleBlurTypeChange}
+        onStrengthChange={handleStrengthChange}
+        onStrengthCommit={handleStrengthCommit}
+        onRadiusChange={setBrushRadius}
+      />
 
-        <div className="space-y-4">
-          <div>
-            <ShortcutTooltip content={blurTypeTooltip}>
-              <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
-                Blur Type
-              </Label>
-            </ShortcutTooltip>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                disabled={!canEditBlurType}
-                onClick={() => handleBlurTypeChange('normal')}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  displayedBlurType === 'normal'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-                }`}>
-                <Droplets className="h-3 w-3" />
-                Normal
-              </button>
-              <button
-                type="button"
-                disabled={!canEditBlurType}
-                onClick={() => handleBlurTypeChange('pixelated')}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  displayedBlurType === 'pixelated'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-                }`}>
-                <Grid3X3 className="h-3 w-3" />
-                Pixelated
-              </button>
-            </div>
-          </div>
+      <SplitViewSection
+        image2={image2}
+        splitDirection={splitDirection}
+        splitRatio={splitRatio}
+        lightImageSide={lightImageSide}
+        uploadDialogTooltip={uploadDialogTooltip}
+        directionTooltip={directionTooltip}
+        placementTooltip={placementTooltip}
+        fileInputRef={fileInputRef}
+        onSetSplitDirection={(dir) => setSplitDirection(dir, {commitHistory: true})}
+        onSetSplitRatio={(value) => setSplitRatio(value, {debouncedHistory: true})}
+        onSetLightImageSide={(side) => setLightImageSide(side, {reorderImages: true})}
+        onRemoveSecondImage={removeSecondImage}
+      />
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <ShortcutTooltip content={strengthTooltip}>
-                <Label
-                  className={`text-xs ${canEditStrength ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-                  Strength
-                </Label>
-              </ShortcutTooltip>
-              <span
-                className={`text-xs tabular-nums ${canEditStrength ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-                {displayedStrength}
-              </span>
-            </div>
-            <ShortcutTooltip content={strengthTooltip}>
-              <div
-                className={`rounded-md px-1 py-1 transition-opacity ${
-                  canEditStrength
-                    ? ''
-                    : 'bg-muted/35 border-border/70 border border-dashed opacity-55'
-                }`}>
-                <Slider
-                  value={[displayedStrength]}
-                  onValueChange={([value]) => handleStrengthChange(value)}
-                  onValueCommit={([value]) => handleStrengthCommit(value)}
-                  min={1}
-                  max={30}
-                  step={1}
-                  disabled={!canEditStrength}
-                  className="w-full"
-                />
-              </div>
-            </ShortcutTooltip>
-          </div>
-
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <ShortcutTooltip content={radiusTooltip}>
-                <Label
-                  className={`text-xs ${canEditRadius ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-                  Radius
-                </Label>
-              </ShortcutTooltip>
-              <span
-                className={`text-xs tabular-nums ${canEditRadius ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-                {brushRadius}px
-              </span>
-            </div>
-            <ShortcutTooltip content={radiusTooltip}>
-              <div
-                className={`rounded-md px-1 py-1 transition-opacity ${
-                  canEditRadius
-                    ? ''
-                    : 'bg-muted/35 border-border/70 border border-dashed opacity-55'
-                }`}>
-                <Slider
-                  value={[brushRadius]}
-                  onValueChange={([value]) => setBrushRadius(value)}
-                  min={5}
-                  max={100}
-                  step={1}
-                  disabled={!canEditRadius}
-                  className="w-full"
-                />
-              </div>
-            </ShortcutTooltip>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-border border-b-2 p-4">
-        <div className="mb-4 flex items-center gap-2">
-          <SplitSquareVertical className="text-primary h-4 w-4" />
-          <h3 className="text-foreground text-sm font-semibold">Split View</h3>
-        </div>
-
-        {!image2 ? (
-          <div>
-            <ShortcutTooltip content={uploadDialogTooltip}>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="border-border bg-secondary/30 text-muted-foreground hover:text-foreground hover:border-muted-foreground flex w-full items-center justify-center gap-2 rounded-md border border-dashed px-3 py-3 text-xs transition-colors">
-                <Upload className="h-3.5 w-3.5" />
-                Add second image
-              </button>
-            </ShortcutTooltip>
-            <p className="text-muted-foreground mt-2 text-center text-[10px]">
-              Add a second image for light/dark mode split
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <ShortcutTooltip content={directionTooltip}>
-                <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
-                  Direction
-                </Label>
-              </ShortcutTooltip>
-              <div className="grid grid-cols-4 gap-1">
-                {[
-                  {dir: 'vertical' as SplitDirection, icon: ArrowLeftRight},
-                  {dir: 'horizontal' as SplitDirection, icon: ArrowUpDown},
-                  {dir: 'diagonal-tl-br' as SplitDirection, icon: Slash},
-                  {dir: 'diagonal-tr-bl' as SplitDirection, icon: Slash},
-                ].map(({dir, icon: Icon}) => (
-                  <button
-                    key={dir}
-                    type="button"
-                    onClick={() => setSplitDirection(dir, {commitHistory: true})}
-                    aria-label={`Set split direction to ${dir}`}
-                    className={`flex items-center justify-center rounded-md p-2 transition-colors ${
-                      splitDirection === dir
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                    }`}>
-                    <Icon className={`h-4 w-4 ${dir === 'diagonal-tr-bl' ? 'scale-x-[-1]' : ''}`} />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <Label className="text-muted-foreground text-xs">Split Ratio</Label>
-                <span className="text-muted-foreground text-xs tabular-nums">{splitRatio}%</span>
-              </div>
-              <Slider
-                value={[splitRatio]}
-                onValueChange={([value]) => setSplitRatio(value, {debouncedHistory: true})}
-                min={10}
-                max={90}
-                step={1}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <ShortcutTooltip content={placementTooltip}>
-                <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
-                  Placement
-                </Label>
-              </ShortcutTooltip>
-              <div className="grid grid-cols-2 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setLightImageSide('left', {reorderImages: true})}
-                  className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
-                    lightImageSide === 'left'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                  }`}>
-                  <div className="font-semibold">Light Left</div>
-                  <div className="opacity-80">Dark Right</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLightImageSide('right', {reorderImages: true})}
-                  className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
-                    lightImageSide === 'right'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                  }`}>
-                  <div className="font-semibold">Light Right</div>
-                  <div className="opacity-80">Dark Left</div>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={removeSecondImage}
-                className="w-full text-xs">
-                <ImageIcon className="mr-1.5 h-3 w-3" />
-                Remove second image
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-auto p-4">
-        <ShortcutTooltip content={shortcutsTooltip}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={openShortcutsModal}
-            className="w-full justify-between text-xs">
-            <span className="flex items-center gap-1.5">
-              <Keyboard className="h-3.5 w-3.5" />
-              Shortcuts
-            </span>
-            <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono text-[10px]">
-              {formatShortcutById('shortcuts-modal')}
-            </kbd>
-          </Button>
-        </ShortcutTooltip>
-      </div>
+      <ShortcutsSection
+        shortcutsTooltip={shortcutsTooltip}
+        onOpenShortcutsModal={openShortcutsModal}
+      />
 
       <input
         ref={fileInputRef}

@@ -1,4 +1,13 @@
 import {useEffect} from 'react';
+import {
+  getTemplateSlotIndex,
+  isArrowLeft,
+  isArrowRight,
+  isLetterKey,
+  isSlashShortcut,
+  isTypingElement,
+  normalizeKey,
+} from '@/features/editor/lib/keyboard';
 import type {EditorStoreState, SplitDirection} from '@/features/editor/state/types';
 import {confirmResetProject} from '@/features/editor/lib/confirm-reset-project';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
@@ -23,64 +32,6 @@ const SPLIT_DIRECTION_ORDER: SplitDirection[] = [
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function normalizeKey(key: string): string {
-  return key.length === 1 ? key.toLowerCase() : key;
-}
-
-function isLetterKey(event: KeyboardEvent, letter: string): boolean {
-  const normalizedLetter = letter.toLowerCase();
-  return (
-    normalizeKey(event.key) === normalizedLetter ||
-    event.code === `Key${normalizedLetter.toUpperCase()}`
-  );
-}
-
-function isArrowLeft(event: KeyboardEvent): boolean {
-  return event.key === 'ArrowLeft' || event.code === 'ArrowLeft';
-}
-
-function isArrowRight(event: KeyboardEvent): boolean {
-  return event.key === 'ArrowRight' || event.code === 'ArrowRight';
-}
-
-function isSlashShortcut(event: KeyboardEvent): boolean {
-  return event.code === 'Slash' || event.key === '/' || event.key === '?';
-}
-
-function getTemplateSlotIndex(event: KeyboardEvent): number | null {
-  const codeMatch = /^Digit([1-9])$/.exec(event.code);
-  if (codeMatch) {
-    return Number(codeMatch[1]) - 1;
-  }
-
-  if (/^[1-9]$/.test(event.key)) {
-    return Number(event.key) - 1;
-  }
-
-  return null;
-}
-
-function isTextInputType(type: string): boolean {
-  return ['text', 'search', 'url', 'tel', 'password', 'email', 'number'].includes(type);
-}
-
-function isTypingElement(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-
-  const nearest = target.closest<HTMLElement>(
-    'input, textarea, select, [contenteditable=""], [contenteditable="true"]',
-  );
-  if (!nearest) return false;
-
-  if (nearest.isContentEditable) return true;
-  if (nearest instanceof HTMLTextAreaElement || nearest instanceof HTMLSelectElement) return true;
-  if (nearest instanceof HTMLInputElement) {
-    return isTextInputType((nearest.type || 'text').toLowerCase());
-  }
-
-  return false;
 }
 
 function getValidSelectedStrokeIndices(state: EditorStoreState): number[] {
