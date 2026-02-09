@@ -80,6 +80,7 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
   const blurType = useEditorStore((state) => state.blurType);
   const brushRadius = useEditorStore((state) => state.brushRadius);
   const brushStrength = useEditorStore((state) => state.brushStrength);
+  const isShiftPressed = useEditorStore((state) => state.isShiftPressed);
   const blurStrokes = useEditorStore((state) => state.blurStrokes);
   const splitRatio = useEditorStore((state) => state.splitRatio);
   const splitDirection = useEditorStore((state) => state.splitDirection);
@@ -136,7 +137,7 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
     activeTool === 'select' && validSelectedStrokeIndices.length > 0;
   const canEditBlurType = activeTool === 'blur' || isSelectToolWithSelection;
   const canEditStrength = activeTool === 'blur' || isSelectToolWithSelection;
-  const canEditRadius = activeTool === 'blur';
+  const canEditRadius = activeTool === 'blur' && !isShiftPressed;
   const outlinesForcedOn = activeTool === 'select';
   const outlinesTogglePressed = outlinesForcedOn || showBlurOutlines;
   const selectedSourceStroke = isSelectToolWithSelection
@@ -246,47 +247,43 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
       className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r-2"
       style={{background: 'oklch(var(--sidebar-background))'}}>
       <div className="border-border border-b-2 p-4">
-        <Label className="text-muted-foreground mb-2 block text-xs">Tool</Label>
+        <ShortcutTooltip content={switchToolTooltip}>
+          <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">Tool</Label>
+        </ShortcutTooltip>
         <div data-testid="tool-grid" className="grid grid-cols-2 gap-1">
-          <ShortcutTooltip content={switchToolTooltip}>
-            <button
-              type="button"
-              onClick={() => setActiveTool('drag')}
-              className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
-                activeTool === 'drag'
-                  ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}>
-              <Hand className="h-3.5 w-3.5" />
-              Drag
-            </button>
-          </ShortcutTooltip>
-          <ShortcutTooltip content={switchToolTooltip}>
-            <button
-              type="button"
-              onClick={() => setActiveTool('select')}
-              className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
-                activeTool === 'select'
-                  ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}>
-              <MousePointer2 className="h-3.5 w-3.5" />
-              Select
-            </button>
-          </ShortcutTooltip>
-          <ShortcutTooltip content={switchToolTooltip}>
-            <button
-              type="button"
-              onClick={() => setActiveTool('blur')}
-              className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
-                activeTool === 'blur'
-                  ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}>
-              <Droplets className="h-3.5 w-3.5" />
-              Blur Brush
-            </button>
-          </ShortcutTooltip>
+          <button
+            type="button"
+            onClick={() => setActiveTool('drag')}
+            className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
+              activeTool === 'drag'
+                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}>
+            <Hand className="h-3.5 w-3.5" />
+            Drag
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTool('select')}
+            className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
+              activeTool === 'select'
+                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}>
+            <MousePointer2 className="h-3.5 w-3.5" />
+            Select
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTool('blur')}
+            className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
+              activeTool === 'blur'
+                ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}>
+            <Droplets className="h-3.5 w-3.5" />
+            Blur Brush
+          </button>
         </div>
       </div>
 
@@ -326,36 +323,36 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
 
         <div className="space-y-4">
           <div>
-            <Label className="text-muted-foreground mb-2 block text-xs">Blur Type</Label>
+            <ShortcutTooltip content={blurTypeTooltip}>
+              <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
+                Blur Type
+              </Label>
+            </ShortcutTooltip>
             <div className="flex gap-1">
-              <ShortcutTooltip content={blurTypeTooltip}>
-                <button
-                  type="button"
-                  disabled={!canEditBlurType}
-                  onClick={() => handleBlurTypeChange('normal')}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                    displayedBlurType === 'normal'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-                  }`}>
-                  <Droplets className="h-3 w-3" />
-                  Normal
-                </button>
-              </ShortcutTooltip>
-              <ShortcutTooltip content={blurTypeTooltip}>
-                <button
-                  type="button"
-                  disabled={!canEditBlurType}
-                  onClick={() => handleBlurTypeChange('pixelated')}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                    displayedBlurType === 'pixelated'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-                  }`}>
-                  <Grid3X3 className="h-3 w-3" />
-                  Pixelated
-                </button>
-              </ShortcutTooltip>
+              <button
+                type="button"
+                disabled={!canEditBlurType}
+                onClick={() => handleBlurTypeChange('normal')}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  displayedBlurType === 'normal'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
+                }`}>
+                <Droplets className="h-3 w-3" />
+                Normal
+              </button>
+              <button
+                type="button"
+                disabled={!canEditBlurType}
+                onClick={() => handleBlurTypeChange('pixelated')}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  displayedBlurType === 'pixelated'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
+                }`}>
+                <Grid3X3 className="h-3 w-3" />
+                Pixelated
+              </button>
             </div>
           </div>
 
@@ -453,7 +450,9 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
           <div className="space-y-4">
             <div>
               <ShortcutTooltip content={directionTooltip}>
-                <Label className="text-muted-foreground mb-2 block text-xs">Direction</Label>
+                <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
+                  Direction
+                </Label>
               </ShortcutTooltip>
               <div className="grid grid-cols-4 gap-1">
                 {[
@@ -462,21 +461,18 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
                   {dir: 'diagonal-tl-br' as SplitDirection, icon: Slash},
                   {dir: 'diagonal-tr-bl' as SplitDirection, icon: Slash},
                 ].map(({dir, icon: Icon}) => (
-                  <ShortcutTooltip key={dir} content={directionTooltip}>
-                    <button
-                      type="button"
-                      onClick={() => setSplitDirection(dir, {commitHistory: true})}
-                      aria-label={`Set split direction to ${dir}`}
-                      className={`flex items-center justify-center rounded-md p-2 transition-colors ${
-                        splitDirection === dir
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                      }`}>
-                      <Icon
-                        className={`h-4 w-4 ${dir === 'diagonal-tr-bl' ? 'scale-x-[-1]' : ''}`}
-                      />
-                    </button>
-                  </ShortcutTooltip>
+                  <button
+                    key={dir}
+                    type="button"
+                    onClick={() => setSplitDirection(dir, {commitHistory: true})}
+                    aria-label={`Set split direction to ${dir}`}
+                    className={`flex items-center justify-center rounded-md p-2 transition-colors ${
+                      splitDirection === dir
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    }`}>
+                    <Icon className={`h-4 w-4 ${dir === 'diagonal-tr-bl' ? 'scale-x-[-1]' : ''}`} />
+                  </button>
                 ))}
               </div>
             </div>
@@ -498,35 +494,33 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
 
             <div>
               <ShortcutTooltip content={placementTooltip}>
-                <Label className="text-muted-foreground mb-2 block text-xs">Placement</Label>
+                <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
+                  Placement
+                </Label>
               </ShortcutTooltip>
               <div className="grid grid-cols-2 gap-1">
-                <ShortcutTooltip content={placementTooltip}>
-                  <button
-                    type="button"
-                    onClick={() => setLightImageSide('left', {reorderImages: true})}
-                    className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
-                      lightImageSide === 'left'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                    }`}>
-                    <div className="font-semibold">Light Left</div>
-                    <div className="opacity-80">Dark Right</div>
-                  </button>
-                </ShortcutTooltip>
-                <ShortcutTooltip content={placementTooltip}>
-                  <button
-                    type="button"
-                    onClick={() => setLightImageSide('right', {reorderImages: true})}
-                    className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
-                      lightImageSide === 'right'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                    }`}>
-                    <div className="font-semibold">Light Right</div>
-                    <div className="opacity-80">Dark Left</div>
-                  </button>
-                </ShortcutTooltip>
+                <button
+                  type="button"
+                  onClick={() => setLightImageSide('left', {reorderImages: true})}
+                  className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
+                    lightImageSide === 'left'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}>
+                  <div className="font-semibold">Light Left</div>
+                  <div className="opacity-80">Dark Right</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLightImageSide('right', {reorderImages: true})}
+                  className={`rounded-md px-2 py-2 text-center text-[11px] leading-tight transition-colors ${
+                    lightImageSide === 'right'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}>
+                  <div className="font-semibold">Light Right</div>
+                  <div className="opacity-80">Dark Left</div>
+                </button>
               </div>
             </div>
 

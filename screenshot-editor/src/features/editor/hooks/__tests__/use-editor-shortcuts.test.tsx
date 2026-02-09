@@ -84,6 +84,38 @@ describe('useEditorShortcuts', () => {
     expect(useEditorStore.getState().brushStrength).toBe(9);
   });
 
+  it('applies Ctrl+S strength adjustments to selected blur boxes in select mode', () => {
+    useEditorStore.setState({
+      activeTool: 'select',
+      brushStrength: 10,
+      selectedStrokeIndices: [1],
+      blurStrokes: [
+        {
+          points: [{x: 10, y: 10}],
+          radius: 8,
+          strength: 6,
+          blurType: 'normal',
+        },
+        {
+          points: [{x: 40, y: 40}],
+          radius: 8,
+          strength: 12,
+          blurType: 'normal',
+        },
+      ],
+    });
+    render(<ShortcutsHarness />);
+
+    fireEvent.keyDown(window, {key: 's', ctrlKey: true});
+    fireEvent.keyDown(window, {key: 'ArrowRight', ctrlKey: true});
+    fireEvent.keyUp(window, {key: 's'});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes[0].strength).toBe(6);
+    expect(state.blurStrokes[1].strength).toBe(13);
+    expect(state.brushStrength).toBe(10);
+  });
+
   it('also adjusts blur radius and strength with Ctrl+R/S + J/K', () => {
     useEditorStore.setState({brushRadius: 20, brushStrength: 10});
     render(<ShortcutsHarness />);
@@ -218,6 +250,36 @@ describe('useEditorShortcuts', () => {
     expect(state.blurType).toBe('pixelated');
     expect(state.activeTool).toBe('drag');
     expect(state.showExportModal).toBe(true);
+  });
+
+  it('applies Ctrl+B blur type toggle to selected blur boxes in select mode', () => {
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurType: 'normal',
+      selectedStrokeIndices: [0],
+      blurStrokes: [
+        {
+          points: [{x: 12, y: 14}],
+          radius: 9,
+          strength: 8,
+          blurType: 'normal',
+        },
+        {
+          points: [{x: 40, y: 45}],
+          radius: 10,
+          strength: 9,
+          blurType: 'pixelated',
+        },
+      ],
+    });
+    render(<ShortcutsHarness />);
+
+    fireEvent.keyDown(window, {key: 'b', ctrlKey: true});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes[0].blurType).toBe('pixelated');
+    expect(state.blurStrokes[1].blurType).toBe('pixelated');
+    expect(state.blurType).toBe('normal');
   });
 
   it('confirms before starting a new project with Ctrl+N', () => {

@@ -126,6 +126,26 @@ function findTopmostRectIndexAtPoint(
   return null;
 }
 
+function findTopmostResizeHandleAtPoint(
+  point: Point,
+  rects: Array<BlurBoxRect | null>,
+  handleHitSize: number,
+  restrictTo?: Set<number>,
+): {index: number; handle: ResizeHandle} | null {
+  for (let index = rects.length - 1; index >= 0; index -= 1) {
+    if (restrictTo && !restrictTo.has(index)) continue;
+    const rect = rects[index];
+    if (!rect) continue;
+
+    const handle = hitTestResizeHandle(point, rect, handleHitSize);
+    if (handle) {
+      return {index, handle};
+    }
+  }
+
+  return null;
+}
+
 export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasInteractionsOptions) {
   const hasSecondImage = useEditorStore((state) => Boolean(state.image2));
   const activeTool = useEditorStore((state) => state.activeTool);
@@ -161,6 +181,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
     if (areIndexListsEqual(selectedStrokeIndicesRef.current, next)) return;
     selectedStrokeIndicesRef.current = next;
     setSelectedStrokeIndicesState(next);
+    useEditorStore.getState().setSelectedStrokeIndices(next);
   }, []);
 
   const getImageCoordsFromClient = useCallback(
@@ -431,20 +452,22 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       const coords = getImageCoordsFromClient(clientX, clientY);
       const strokes = useEditorStore.getState().blurStrokes;
       const rects = computeBlurStrokeOutlineRects(strokes, canvas.width, canvas.height);
+      const handleHitSize = getResizeHandleHitSizeInCanvasSpace();
 
       const selected = selectedStrokeIndicesRef.current;
       if (selected.length === 1) {
         const selectedRect = rects[selected[0]];
         if (selectedRect) {
-          const handle = hitTestResizeHandle(
-            coords,
-            selectedRect,
-            getResizeHandleHitSizeInCanvasSpace(),
-          );
+          const handle = hitTestResizeHandle(coords, selectedRect, handleHitSize);
           if (handle) {
             return getResizeHandleCursor(handle);
           }
         }
+      }
+
+      const anyHandleHit = findTopmostResizeHandleAtPoint(coords, rects, handleHitSize);
+      if (anyHandleHit) {
+        return getResizeHandleCursor(anyHandleHit.handle);
       }
 
       const selectedSet = new Set(selected);
@@ -585,6 +608,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
+      useEditorStore.getState().setIsShiftPressed(event.shiftKey);
       if (event.button !== 0 && event.button !== 1) return;
 
       if (event.button === 0 && isPointerNearSplitHandle(event.clientX, event.clientY)) {
@@ -630,11 +654,12 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         event.preventDefault();
         const rects = computeBlurStrokeOutlineRects(store.blurStrokes, canvas.width, canvas.height);
         const selected = selectedStrokeIndicesRef.current;
+        const handleHitSize = getResizeHandleHitSizeInCanvasSpace();
 
         if (selected.length === 1) {
           const rect = rects[selected[0]];
           if (rect) {
-            const handle = hitTestResizeHandle(coords, rect, getResizeHandleHitSizeInCanvasSpace());
+            const handle = hitTestResizeHandle(coords, rect, handleHitSize);
             if (handle) {
               selectTransformSessionRef.current = {
                 mode: 'resize',
@@ -651,6 +676,29 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
               setSelectCursor(getResizeHandleCursor(handle));
               return;
             }
+          }
+        }
+
+        const anyHandleHit = findTopmostResizeHandleAtPoint(coords, rects, handleHitSize);
+        if (anyHandleHit) {
+          const targetRect = rects[anyHandleHit.index];
+          if (targetRect) {
+            const nextSelection = [anyHandleHit.index];
+            setSelectedStrokeIndices(nextSelection);
+            selectTransformSessionRef.current = {
+              mode: 'resize',
+              pointerStart: coords,
+              initialStrokes: store.blurStrokes,
+              selectedIndices: nextSelection,
+              selectionUnionRect: targetRect,
+              singleBaseRect: targetRect,
+              baseAspectRatio: targetRect.width / Math.max(targetRect.height, 1e-4),
+              resizeHandle: anyHandleHit.handle,
+              changed: false,
+            };
+            selectInteractionModeRef.current = 'resize';
+            setSelectCursor(getResizeHandleCursor(anyHandleHit.handle));
+            return;
           }
         }
 
@@ -730,6 +778,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
   const handlePointerMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
+      useEditorStore.getState().setIsShiftPressed(event.shiftKey);
       if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
 
       const isOverCanvas = isWithinCanvasBounds(event.clientX, event.clientY);
@@ -838,6 +887,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
   const handlePointerUp = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
+      useEditorStore.getState().setIsShiftPressed(event.shiftKey);
       if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
 
       if (isDraggingSplit) {
@@ -936,6 +986,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
   const handlePointerCancel = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
+      useEditorStore.getState().setIsShiftPressed(false);
       if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
 
       scheduleCursorUpdate(null);

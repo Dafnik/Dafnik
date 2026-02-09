@@ -14,6 +14,7 @@ interface BlurOutlineOverlayProps {
   selectedStrokeIndices?: number[];
   marqueeRect?: BlurBoxRect | null;
   showResizeHandles?: boolean;
+  showResizeHandlesForAll?: boolean;
   scale?: number;
   forceDashedStyle?: boolean;
 }
@@ -33,6 +34,7 @@ export function BlurOutlineOverlay({
   selectedStrokeIndices = [],
   marqueeRect = null,
   showResizeHandles = false,
+  showResizeHandlesForAll = false,
   scale = 1,
   forceDashedStyle = false,
 }: BlurOutlineOverlayProps) {
@@ -46,6 +48,18 @@ export function BlurOutlineOverlay({
   const singleSelectedRect =
     selectedStrokeIndices.length === 1 ? (rects[selectedStrokeIndices[0]] ?? null) : null;
   const handlePoints = useMemo<OverlayHandlePoint[]>(() => {
+    if (showResizeHandlesForAll) {
+      return rects.flatMap((rect, index) => {
+        if (!rect) return [];
+        return getResizeHandlePoints(rect).map((handlePoint) => ({
+          key: `rect-${index}-${handlePoint.handle}`,
+          handle: handlePoint.handle,
+          x: handlePoint.x,
+          y: handlePoint.y,
+        }));
+      });
+    }
+
     if (!showResizeHandles || !singleSelectedRect) return [];
     return getResizeHandlePoints(singleSelectedRect).map((handlePoint) => ({
       key: `single-${handlePoint.handle}`,
@@ -53,7 +67,7 @@ export function BlurOutlineOverlay({
       x: handlePoint.x,
       y: handlePoint.y,
     }));
-  }, [showResizeHandles, singleSelectedRect]);
+  }, [rects, showResizeHandles, showResizeHandlesForAll, singleSelectedRect]);
 
   if (!visible) return null;
 

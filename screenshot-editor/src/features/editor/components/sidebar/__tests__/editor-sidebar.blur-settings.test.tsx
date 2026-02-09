@@ -96,6 +96,22 @@ describe('EditorSidebar blur settings behavior', () => {
     expect(outlinesToggle).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('disables radius input while holding shift in blur tool', () => {
+    useEditorStore.setState({
+      activeTool: 'blur',
+      isShiftPressed: true,
+      brushRadius: 24,
+      brushStrength: 10,
+      blurType: 'normal',
+    });
+
+    renderSidebar([]);
+
+    const [, radiusSlider] = screen.getAllByRole('slider');
+    fireEvent.keyDown(radiusSlider, {key: 'ArrowRight'});
+    expect(useEditorStore.getState().brushRadius).toBe(24);
+  });
+
   it('prefills from a single selected stroke and edits only selected stroke values', async () => {
     const user = userEvent.setup();
     useEditorStore

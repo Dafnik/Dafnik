@@ -1,4 +1,4 @@
-import {act, fireEvent, render} from '@testing-library/react';
+import {act, fireEvent, render, waitFor} from '@testing-library/react';
 import {describe, expect, it} from 'vitest';
 import {EditorCanvasRoot} from '@/features/editor/components/canvas/editor-canvas-root';
 import {computeBlurStrokeOutlineRect} from '@/features/editor/lib/blur-box-geometry';
@@ -106,6 +106,64 @@ describe('EditorCanvasRoot', () => {
     expect(panY).toBe(40);
   });
 
+  it('changes cursor and hides radius preview while shift is held in blur tool', () => {
+    useEditorStore.setState({
+      activeTool: 'blur',
+      isShiftPressed: true,
+      imageWidth: 300,
+      imageHeight: 150,
+      brushRadius: 20,
+      showBlurOutlines: false,
+      blurStrokes: [],
+      currentStroke: null,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+    expect(backgroundContainer.style.cursor).toBe('cell');
+
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 900,
+      clientX: 40,
+      clientY: 40,
+      shiftKey: true,
+    });
+
+    expect(container.querySelector('[data-testid="brush-radius-preview"]')).toBeNull();
+  });
+
+  it('shows radius preview in blur tool when shift is not held', async () => {
+    useEditorStore.setState({
+      activeTool: 'blur',
+      isShiftPressed: false,
+      imageWidth: 300,
+      imageHeight: 150,
+      brushRadius: 20,
+      showBlurOutlines: false,
+      blurStrokes: [],
+      currentStroke: null,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+    expect(backgroundContainer.style.cursor).toBe('crosshair');
+
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 901,
+      clientX: 50,
+      clientY: 50,
+      shiftKey: false,
+    });
+
+    await waitFor(() =>
+      expect(container.querySelector('[data-testid="brush-radius-preview"]')).toBeInTheDocument(),
+    );
+  });
+
   it('auto-shows blur outlines while select tool is active', () => {
     useEditorStore.setState({
       showBlurOutlines: false,
@@ -126,7 +184,7 @@ describe('EditorCanvasRoot', () => {
     const {container} = render(<EditorCanvasRoot />);
     expect(container.querySelectorAll('[data-testid="blur-outline"]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(0);
-    expect(container.querySelectorAll('[data-testid="blur-outline-handle"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid="blur-outline-handle"]')).toHaveLength(8);
   });
 
   it('does not show outlines in blur mode when outlines are disabled and no box is being drawn', () => {
@@ -299,7 +357,7 @@ describe('EditorCanvasRoot', () => {
     expect(state.history.length).toBe(historyBefore + 1);
   });
 
-  it('requires selecting a blur box before resizing it', () => {
+  it('allows resizing a blur box handle without pre-selecting the box first', () => {
     useEditorStore
       .getState()
       .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
@@ -337,32 +395,9 @@ describe('EditorCanvasRoot', () => {
       clientY: 90,
     });
 
-    const afterMoveOnly = useEditorStore.getState().blurStrokes[0];
-    const moveOnlyRect = computeBlurStrokeOutlineRect(afterMoveOnly, 300, 150);
-    expect(afterMoveOnly.radius).toBe(10);
-    expect(moveOnlyRect?.width).toBeCloseTo(20);
-    expect(moveOnlyRect?.height).toBeCloseTo(20);
-
-    fireEvent.pointerDown(backgroundContainer, {
-      button: 0,
-      pointerId: 311,
-      clientX: 90,
-      clientY: 90,
-    });
-    fireEvent.pointerMove(backgroundContainer, {
-      pointerId: 311,
-      clientX: 110,
-      clientY: 110,
-    });
-    fireEvent.pointerUp(backgroundContainer, {
-      pointerId: 311,
-      clientX: 110,
-      clientY: 110,
-    });
-
-    const resizedStroke = useEditorStore.getState().blurStrokes[0];
-    const resizedRect = computeBlurStrokeOutlineRect(resizedStroke, 300, 150);
-    expect(resizedStroke.radius).toBeGreaterThan(10);
+    const resized = useEditorStore.getState().blurStrokes[0];
+    const resizedRect = computeBlurStrokeOutlineRect(resized, 300, 150);
+    expect(resized.radius).toBeGreaterThan(10);
     expect(resizedRect?.width).toBeGreaterThan(20);
     expect(resizedRect?.height).toBeGreaterThan(20);
   });
@@ -555,7 +590,7 @@ describe('EditorCanvasRoot', () => {
     expect(container.querySelectorAll('[data-testid=\"blur-outline-selected\"]')).toHaveLength(2);
   });
 
-  it('supports moving multi-selected blur boxes without showing resize handles', () => {
+  it('supports moving multi-selected blur boxes while showing resize handles', () => {
     useEditorStore.setState({
       activeTool: 'select',
       imageWidth: 300,
@@ -599,7 +634,7 @@ describe('EditorCanvasRoot', () => {
     });
 
     expect(container.querySelectorAll('[data-testid=\"blur-outline-selected\"]')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-testid=\"blur-outline-handle\"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid=\"blur-outline-handle\"]')).toHaveLength(16);
 
     fireEvent.pointerDown(backgroundContainer, {
       button: 0,

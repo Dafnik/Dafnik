@@ -73,6 +73,33 @@ describe('BlurOutlineOverlay', () => {
     expect(getAllByTestId('blur-outline-handle')).toHaveLength(8);
   });
 
+  it('renders resize handles for all blur boxes when requested', () => {
+    const {container} = render(
+      <BlurOutlineOverlay
+        visible
+        showResizeHandlesForAll
+        canvasWidth={100}
+        canvasHeight={100}
+        strokes={[
+          {
+            points: [{x: 10, y: 10}],
+            radius: 5,
+            strength: 10,
+            blurType: 'normal',
+          },
+          {
+            points: [{x: 40, y: 40}],
+            radius: 6,
+            strength: 12,
+            blurType: 'pixelated',
+          },
+        ]}
+      />,
+    );
+
+    expect(container.querySelectorAll('[data-testid="blur-outline-handle"]')).toHaveLength(16);
+  });
+
   it('keeps handles hidden when using dashed outlines without selection mode handles', () => {
     const {container} = render(
       <BlurOutlineOverlay

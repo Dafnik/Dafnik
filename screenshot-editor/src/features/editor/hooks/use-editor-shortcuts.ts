@@ -1,5 +1,5 @@
 import {useEffect} from 'react';
-import type {SplitDirection} from '@/features/editor/state/types';
+import type {EditorStoreState, SplitDirection} from '@/features/editor/state/types';
 import {confirmResetProject} from '@/features/editor/lib/confirm-reset-project';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
@@ -83,6 +83,18 @@ function isTypingElement(target: EventTarget | null): boolean {
   return false;
 }
 
+function getValidSelectedStrokeIndices(state: EditorStoreState): number[] {
+  return [...new Set(state.selectedStrokeIndices)].filter(
+    (index) => Number.isInteger(index) && index >= 0 && index < state.blurStrokes.length,
+  );
+}
+
+function getSelectedStrokeSource(state: EditorStoreState) {
+  const selectedIndices = getValidSelectedStrokeIndices(state);
+  if (selectedIndices.length === 0) return null;
+  return state.blurStrokes[selectedIndices[0]] ?? null;
+}
+
 export function useEditorShortcuts() {
   useEffect(() => {
     const preventBrowserZoom = (event: WheelEvent) => {
@@ -104,6 +116,7 @@ export function useEditorShortcuts() {
       if (event.code) {
         pressedKeys.add(event.code);
       }
+      useEditorStore.getState().setIsShiftPressed(event.shiftKey);
 
       const hasModifier = event.ctrlKey || event.metaKey;
       const isTyping = isTypingElement(event.target) || isTypingElement(document.activeElement);
@@ -173,13 +186,30 @@ export function useEditorShortcuts() {
 
         if (pressedKeys.has('s') || pressedKeys.has('KeyS')) {
           event.preventDefault();
-          store.setBrushStrength(
-            clamp(
-              store.brushStrength + delta * BRUSH_STRENGTH_STEP,
+          const selectedIndices = getValidSelectedStrokeIndices(store);
+          const canApplyToSelection = store.activeTool === 'select' && selectedIndices.length > 0;
+          if (canApplyToSelection) {
+            const sourceStroke = getSelectedStrokeSource(store);
+            const currentStrength = sourceStroke?.strength ?? store.brushStrength;
+            const nextStrength = clamp(
+              currentStrength + delta * BRUSH_STRENGTH_STEP,
               BRUSH_STRENGTH_MIN,
               BRUSH_STRENGTH_MAX,
-            ),
-          );
+            );
+            store.updateBlurStrokesAtIndices(
+              selectedIndices,
+              {strength: nextStrength},
+              {commitHistory: true},
+            );
+          } else {
+            store.setBrushStrength(
+              clamp(
+                store.brushStrength + delta * BRUSH_STRENGTH_STEP,
+                BRUSH_STRENGTH_MIN,
+                BRUSH_STRENGTH_MAX,
+              ),
+            );
+          }
           return;
         }
 
@@ -216,12 +246,25 @@ export function useEditorShortcuts() {
 
       if (isLetterKey(event, 'b')) {
         event.preventDefault();
-        const currentIndex = BLUR_TYPE_ORDER.indexOf(store.blurType);
+        const selectedIndices = getValidSelectedStrokeIndices(store);
+        const canApplyToSelection = store.activeTool === 'select' && selectedIndices.length > 0;
+        const sourceType = canApplyToSelection
+          ? (getSelectedStrokeSource(store)?.blurType ?? store.blurType)
+          : store.blurType;
+        const currentIndex = BLUR_TYPE_ORDER.indexOf(sourceType);
         const nextType =
           currentIndex < 0
             ? BLUR_TYPE_ORDER[0]
             : BLUR_TYPE_ORDER[(currentIndex + 1) % BLUR_TYPE_ORDER.length];
-        store.setBlurType(nextType);
+        if (canApplyToSelection) {
+          store.updateBlurStrokesAtIndices(
+            selectedIndices,
+            {blurType: nextType},
+            {commitHistory: true},
+          );
+        } else {
+          store.setBlurType(nextType);
+        }
         return;
       }
 
@@ -247,10 +290,12 @@ export function useEditorShortcuts() {
       if (event.code) {
         pressedKeys.delete(event.code);
       }
+      useEditorStore.getState().setIsShiftPressed(event.shiftKey);
     };
 
     const clearPressedKeys = () => {
       pressedKeys.clear();
+      useEditorStore.getState().setIsShiftPressed(false);
     };
 
     window.addEventListener('keydown', handleKeyDown, true);

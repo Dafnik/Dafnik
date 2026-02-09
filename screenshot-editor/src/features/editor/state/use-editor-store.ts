@@ -43,6 +43,7 @@ const baseState = {
   blurType: initialSettings.blurType,
   brushRadius: initialSettings.brushRadius,
   brushStrength: initialSettings.brushStrength,
+  isShiftPressed: false,
   lightImageSide: initialSettings.lightImageSide,
   showBlurOutlines: false,
   zoom: initialSettings.zoom,
@@ -61,6 +62,7 @@ const baseState = {
   showTemplatePanel: false,
   selectedTemplateId: null,
   blurTemplates: initialBlurTemplates,
+  selectedStrokeIndices: [],
   history: [] as HistorySnapshot[],
   historyIndex: -1,
   canUndo: false,
@@ -96,6 +98,8 @@ export const useEditorStore = create<EditorStoreState>()(
           lightSelectorState: 'idle',
           showTemplatePanel: false,
           selectedTemplateId: null,
+          selectedStrokeIndices: [],
+          isShiftPressed: false,
           ...withHistoryMeta([], -1),
         }));
         get().pushHistorySnapshot();
@@ -121,7 +125,9 @@ export const useEditorStore = create<EditorStoreState>()(
           lightSelectorState: 'idle',
           showTemplatePanel: false,
           selectedTemplateId: null,
+          selectedStrokeIndices: [],
           showBlurOutlines: false,
+          isShiftPressed: false,
           panX: 0,
           panY: 0,
           ...withHistoryMeta([], -1),
@@ -136,6 +142,7 @@ export const useEditorStore = create<EditorStoreState>()(
           brushStrength: DEFAULT_SETTINGS.brushStrength,
           blurType: DEFAULT_SETTINGS.blurType,
           activeTool: DEFAULT_SETTINGS.activeTool,
+          isShiftPressed: false,
           lightImageSide: DEFAULT_SETTINGS.lightImageSide,
           zoom: DEFAULT_SETTINGS.zoom,
           showBlurOutlines: false,
@@ -143,6 +150,7 @@ export const useEditorStore = create<EditorStoreState>()(
       },
 
       setActiveTool: (activeTool) => set({activeTool}),
+      setIsShiftPressed: (isShiftPressed) => set({isShiftPressed}),
       setBrushRadius: (brushRadius) => set({brushRadius}),
       setBrushStrength: (brushStrength) => set({brushStrength}),
       setBlurType: (blurType) => set({blurType}),
@@ -344,6 +352,7 @@ export const useEditorStore = create<EditorStoreState>()(
           showTemplatePanel,
           showBlurOutlines: showTemplatePanel,
         }),
+      setSelectedStrokeIndices: (selectedStrokeIndices) => set({selectedStrokeIndices}),
       setSelectedTemplate: (selectedTemplateId) => set({selectedTemplateId}),
 
       createBlurTemplate: (name) => {

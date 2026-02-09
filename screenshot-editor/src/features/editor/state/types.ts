@@ -65,6 +65,7 @@ export interface ToolSlice {
   blurType: BlurType;
   brushRadius: number;
   brushStrength: number;
+  isShiftPressed: boolean;
   lightImageSide: LightImageSide;
   showBlurOutlines: boolean;
 }
@@ -94,6 +95,7 @@ export interface UiSlice {
   showTemplatePanel: boolean;
   selectedTemplateId: string | null;
   blurTemplates: BlurTemplate[];
+  selectedStrokeIndices: number[];
 }
 
 export interface HistorySlice {
@@ -161,6 +163,7 @@ export interface EditorStoreActions {
   resetProject: () => void;
   resetSettingsToDefaults: () => void;
   setActiveTool: (tool: ActiveTool) => void;
+  setIsShiftPressed: (pressed: boolean) => void;
   setBrushRadius: (value: number) => void;
   setBrushStrength: (value: number) => void;
   setBlurType: (type: BlurType) => void;
@@ -187,6 +190,7 @@ export interface EditorStoreActions {
   setShowBlurOutlines: (enabled: boolean) => void;
   toggleTemplatePanel: () => void;
   setTemplatePanelOpen: (open: boolean) => void;
+  setSelectedStrokeIndices: (indices: number[]) => void;
   setSelectedTemplate: (templateId: string | null) => void;
   createBlurTemplate: (name: string) => ActionResult;
   updateBlurTemplate: (templateId: string, name: string) => ActionResult;

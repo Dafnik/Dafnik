@@ -20,23 +20,14 @@ function renderEditorLayout() {
 }
 
 describe('EditorSidebar shortcut tooltips', () => {
-  it('shows switch tool tooltip on drag/select tool buttons', async () => {
+  it('shows switch tool tooltip on tool label', async () => {
     const user = userEvent.setup();
     const {container} = renderEditorLayout();
     const toolGrid = container.querySelector('[data-testid="tool-grid"]');
     expect(toolGrid).toHaveClass('grid', 'grid-cols-2');
 
-    const dragButton = screen.getByRole('button', {name: /drag/i});
-    await user.hover(dragButton);
-    expect(
-      await screen.findByRole('tooltip', {
-        name: formatShortcutTooltip('Switch tool', ['switch-tool']),
-      }),
-    ).toBeInTheDocument();
-
-    const selectButton = screen.getByRole('button', {name: /select/i});
-    await user.hover(selectButton);
-
+    const toolLabel = screen.getByText('Tool');
+    await user.hover(toolLabel);
     expect(
       await screen.findByRole('tooltip', {
         name: formatShortcutTooltip('Switch tool', ['switch-tool']),
@@ -49,8 +40,8 @@ describe('EditorSidebar shortcut tooltips', () => {
     const user = userEvent.setup();
     renderEditorLayout();
 
-    const blurTypeButton = screen.getByRole('button', {name: /normal/i});
-    await user.hover(blurTypeButton);
+    const blurTypeLabel = screen.getByText('Blur Type');
+    await user.hover(blurTypeLabel);
     expect(
       await screen.findByRole('tooltip', {
         name: formatShortcutTooltip('Toggle blur type', ['toggle-blur-type']),
@@ -103,14 +94,15 @@ describe('EditorSidebar shortcut tooltips', () => {
     const user = userEvent.setup();
     renderEditorLayout();
 
-    const directionButton = screen.getByRole('button', {name: 'Set split direction to vertical'});
-    await user.hover(directionButton);
-
+    const directionLabel = screen.getByText('Direction');
+    await user.hover(directionLabel);
     expect(
       await screen.findByRole('tooltip', {
         name: formatShortcutTooltip('Cycle direction', ['cycle-split-direction']),
       }),
     ).toBeInTheDocument();
+
+    const directionButton = screen.getByRole('button', {name: 'Set split direction to vertical'});
     expect(directionButton).not.toHaveAttribute('title');
   });
 
@@ -119,8 +111,8 @@ describe('EditorSidebar shortcut tooltips', () => {
     const user = userEvent.setup();
     renderEditorLayout();
 
-    const placementButton = screen.getByRole('button', {name: /light left/i});
-    await user.hover(placementButton);
+    const placementLabel = screen.getByText('Placement');
+    await user.hover(placementLabel);
 
     expect(
       await screen.findByRole('tooltip', {

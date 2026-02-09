@@ -29,6 +29,7 @@ export function EditorCanvasRoot({
     panX,
     panY,
     activeTool,
+    isShiftPressed,
     brushRadius,
     showBlurOutlines,
     blurStrokes,
@@ -45,6 +46,7 @@ export function EditorCanvasRoot({
       panX: state.panX,
       panY: state.panY,
       activeTool: state.activeTool,
+      isShiftPressed: state.isShiftPressed,
       brushRadius: state.brushRadius,
       showBlurOutlines: state.showBlurOutlines,
       blurStrokes: state.blurStrokes,
@@ -80,6 +82,7 @@ export function EditorCanvasRoot({
   );
 
   const isBlurTool = activeTool === 'blur';
+  const isBlurShiftMode = isBlurTool && isShiftPressed;
   const isDragTool = activeTool === 'drag';
   const isSelectTool = activeTool === 'select';
   const splitHandlePoint = useMemo(() => {
@@ -116,7 +119,9 @@ export function EditorCanvasRoot({
           : isSelectTool
             ? selectCursor
             : isBlurTool
-              ? 'crosshair'
+              ? isBlurShiftMode
+                ? 'cell'
+                : 'crosshair'
               : 'default';
 
   useEffect(() => {
@@ -234,6 +239,7 @@ export function EditorCanvasRoot({
             selectedStrokeIndices={selectedStrokeIndices}
             marqueeRect={marqueeRect}
             showResizeHandles={isSelectTool && selectedStrokeIndices.length === 1}
+            showResizeHandlesForAll={isSelectTool}
             scale={scale}
             forceDashedStyle={effectiveShowOutlines}
           />
@@ -242,6 +248,7 @@ export function EditorCanvasRoot({
             cursorPos={cursorPos}
             isPanning={isPanning}
             isBlurTool={isBlurTool}
+            isShiftMode={isBlurShiftMode}
             brushRadius={brushRadius}
             scale={scale}
           />
