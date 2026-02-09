@@ -9,6 +9,26 @@ interface UseCanvasInteractionsOptions {
 }
 
 const SPLIT_HANDLE_HIT_RADIUS_PX = 14;
+const MIN_ZOOM = 10;
+const MAX_ZOOM = 500;
+
+function clampZoom(value: number): number {
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+}
+
+function clampZoomFloat(value: number): number {
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+}
+
+function normalizeWheelDelta(event: WheelEvent): number {
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    return event.deltaY * 16;
+  }
+  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    return event.deltaY * (typeof window === 'undefined' ? 800 : window.innerHeight);
+  }
+  return event.deltaY;
+}
 
 export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasInteractionsOptions) {
   const activeTool = useEditorStore((state) => state.activeTool);
@@ -17,7 +37,6 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const splitRatio = useEditorStore((state) => state.splitRatio);
   const panX = useEditorStore((state) => state.panX);
   const panY = useEditorStore((state) => state.panY);
-  const zoom = useEditorStore((state) => state.zoom);
   const isDrawing = useEditorStore((state) => state.isDrawing);
   const startStroke = useEditorStore((state) => state.startStroke);
   const appendStrokePoint = useEditorStore((state) => state.appendStrokePoint);
@@ -32,6 +51,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const [cursorPos, setCursorPos] = useState<{x: number; y: number} | null>(null);
   const lastPanPos = useRef({x: 0, y: 0});
   const activePointerId = useRef<number | null>(null);
+  const wheelZoomResidual = useRef(0);
 
   const getImageCoordsFromClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -332,16 +352,42 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       event.preventDefault();
       event.stopPropagation();
 
-      const zoomFactor = event.deltaY > 0 ? 0.95 : 1.05;
-      const nextZoom = Math.max(10, Math.min(500, Math.round(zoom * zoomFactor)));
-      if (nextZoom !== zoom) {
+      const normalizedDelta = normalizeWheelDelta(event);
+      if (normalizedDelta === 0) return;
+
+      const {zoom: currentZoom, panX: currentPanX, panY: currentPanY} = useEditorStore.getState();
+      const adjustedDelta = Math.sign(normalizedDelta) * Math.log1p(Math.abs(normalizedDelta));
+      const zoomFactor = Math.exp(-adjustedDelta * 0.02);
+      const currentZoomFloat = clampZoomFloat(currentZoom + wheelZoomResidual.current);
+      const nextZoomFloat = clampZoomFloat(currentZoomFloat * zoomFactor);
+      const nextZoom = clampZoom(Math.round(nextZoomFloat));
+
+      wheelZoomResidual.current = nextZoomFloat - nextZoom;
+
+      if (nextZoom === currentZoom) return;
+
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
         setZoom(nextZoom);
+        return;
       }
+
+      const containerCenterX = rect.left + rect.width / 2;
+      const containerCenterY = rect.top + rect.height / 2;
+      const pointerOffsetX = event.clientX - containerCenterX;
+      const pointerOffsetY = event.clientY - containerCenterY;
+      const scaleRatio = nextZoom / currentZoom;
+
+      const nextPanX = scaleRatio * currentPanX + (1 - scaleRatio) * pointerOffsetX;
+      const nextPanY = scaleRatio * currentPanY + (1 - scaleRatio) * pointerOffsetY;
+
+      setPan(nextPanX, nextPanY);
+      setZoom(nextZoom);
     };
 
     container.addEventListener('wheel', handleWheel, {passive: false});
     return () => container.removeEventListener('wheel', handleWheel);
-  }, [containerRef, setZoom, zoom]);
+  }, [containerRef, setPan, setZoom]);
 
   return {
     isPanning,
