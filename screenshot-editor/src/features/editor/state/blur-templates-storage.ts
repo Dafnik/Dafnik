@@ -45,6 +45,7 @@ export function normalizeStrokesForTemplate(
     radiusRatio: stroke.radius / referenceSize,
     strength: stroke.strength,
     blurType: stroke.blurType,
+    shape: stroke.shape,
   }));
 }
 
@@ -65,6 +66,7 @@ export function denormalizeTemplateToStrokes(
     radius: Math.max(1, stroke.radiusRatio * referenceSize),
     strength: stroke.strength,
     blurType: stroke.blurType,
+    shape: stroke.shape ?? 'brush',
   }));
 }
 

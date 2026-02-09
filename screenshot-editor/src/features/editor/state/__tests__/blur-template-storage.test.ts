@@ -20,6 +20,7 @@ describe('blur template storage', () => {
             radiusRatio: 0.1,
             strength: 8,
             blurType: 'normal',
+            shape: 'box',
           },
         ],
         createdAt: '2026-02-07T00:00:00.000Z',

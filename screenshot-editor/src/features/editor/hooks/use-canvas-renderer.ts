@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef} from 'react';
 import type {MutableRefObject, RefObject} from 'react';
+import {normalizeRectFromPoints} from '@/features/editor/lib/blur-box-geometry';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import type {BlurStroke, SplitDirection} from '@/features/editor/state/types';
 import {getSplitLineSegment} from '@/features/editor/lib/split-geometry';
@@ -102,32 +103,41 @@ export function useCanvasRenderer({
 
         ctx.save();
 
-        ctx.beginPath();
-        for (let i = 0; i < stroke.points.length; i += 1) {
-          const p = stroke.points[i];
-          if (i === 0) {
-            ctx.arc(p.x, p.y, stroke.radius, 0, Math.PI * 2);
-          } else {
-            ctx.moveTo(p.x + stroke.radius, p.y);
-            ctx.arc(p.x, p.y, stroke.radius, 0, Math.PI * 2);
+        if ((stroke.shape ?? 'brush') === 'box') {
+          const start = stroke.points[0];
+          const end = stroke.points[1] ?? start;
+          const rect = normalizeRectFromPoints(start, end);
+          ctx.beginPath();
+          ctx.rect(rect.x, rect.y, Math.max(1, rect.width), Math.max(1, rect.height));
+        } else {
+          ctx.beginPath();
+          for (let i = 0; i < stroke.points.length; i += 1) {
+            const p = stroke.points[i];
+            if (i === 0) {
+              ctx.arc(p.x, p.y, stroke.radius, 0, Math.PI * 2);
+            } else {
+              ctx.moveTo(p.x + stroke.radius, p.y);
+              ctx.arc(p.x, p.y, stroke.radius, 0, Math.PI * 2);
+            }
+          }
+
+          for (let i = 1; i < stroke.points.length; i += 1) {
+            const p0 = stroke.points[i - 1];
+            const p1 = stroke.points[i];
+            const dx = p1.x - p0.x;
+            const dy = p1.y - p0.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist === 0) continue;
+            const nx = (-dy / dist) * stroke.radius;
+            const ny = (dx / dist) * stroke.radius;
+            ctx.moveTo(p0.x + nx, p0.y + ny);
+            ctx.lineTo(p1.x + nx, p1.y + ny);
+            ctx.lineTo(p1.x - nx, p1.y - ny);
+            ctx.lineTo(p0.x - nx, p0.y - ny);
+            ctx.closePath();
           }
         }
 
-        for (let i = 1; i < stroke.points.length; i += 1) {
-          const p0 = stroke.points[i - 1];
-          const p1 = stroke.points[i];
-          const dx = p1.x - p0.x;
-          const dy = p1.y - p0.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist === 0) continue;
-          const nx = (-dy / dist) * stroke.radius;
-          const ny = (dx / dist) * stroke.radius;
-          ctx.moveTo(p0.x + nx, p0.y + ny);
-          ctx.lineTo(p1.x + nx, p1.y + ny);
-          ctx.lineTo(p1.x - nx, p1.y - ny);
-          ctx.lineTo(p0.x - nx, p0.y - ny);
-          ctx.closePath();
-        }
         ctx.clip();
 
         if (stroke.blurType === 'pixelated') {

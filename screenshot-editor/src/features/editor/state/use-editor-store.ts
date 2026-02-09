@@ -187,18 +187,43 @@ export const useEditorStore = create<EditorStoreState>()(
       setZoom: (value) => set({zoom: Math.max(10, Math.min(500, value))}),
       setPan: (panX, panY) => set({panX, panY}),
 
-      startStroke: (x, y) => {
+      startStroke: (x, y, options) => {
         const state = get();
         if (state.activeTool !== 'blur') return;
+        const shape = options?.shape ?? 'brush';
 
         set({
           isDrawing: true,
           currentStroke: {
-            points: [{x, y}],
+            points:
+              shape === 'box'
+                ? [
+                    {x, y},
+                    {x, y},
+                  ]
+                : [{x, y}],
             radius: state.brushRadius,
             strength: state.brushStrength,
             blurType: state.blurType,
+            shape,
           },
+        });
+      },
+
+      setCurrentStrokeEndpoint: (x, y) => {
+        set((state) => {
+          if (!state.isDrawing || !state.currentStroke) return {};
+          if ((state.currentStroke.shape ?? 'brush') !== 'box') return {};
+
+          const startPoint = state.currentStroke.points[0];
+          if (!startPoint) return {};
+
+          return {
+            currentStroke: {
+              ...state.currentStroke,
+              points: [startPoint, {x, y}],
+            },
+          };
         });
       },
 
@@ -512,7 +537,24 @@ export const useEditorStore = create<EditorStoreState>()(
     }),
     {
       name: SETTINGS_STORAGE_KEY,
-      version: 1,
+      version: 2,
+      migrate: (persistedState, version) => {
+        if (!persistedState || typeof persistedState !== 'object') {
+          return persistedState;
+        }
+
+        if (version < 2) {
+          const typedState = persistedState as Partial<EditorStoreState>;
+          if (typedState.activeTool === 'select') {
+            return {
+              ...typedState,
+              activeTool: 'drag',
+            };
+          }
+        }
+
+        return persistedState;
+      },
       partialize: (state) =>
         getPersistedSettingsSlice({
           splitRatio: state.splitRatio,

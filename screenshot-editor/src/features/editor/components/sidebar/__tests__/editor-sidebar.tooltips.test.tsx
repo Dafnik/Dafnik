@@ -20,9 +20,19 @@ function renderEditorLayout() {
 }
 
 describe('EditorSidebar shortcut tooltips', () => {
-  it('shows switch tool tooltip on tool buttons', async () => {
+  it('shows switch tool tooltip on drag/select tool buttons', async () => {
     const user = userEvent.setup();
-    renderEditorLayout();
+    const {container} = renderEditorLayout();
+    const toolGrid = container.querySelector('[data-testid="tool-grid"]');
+    expect(toolGrid).toHaveClass('grid', 'grid-cols-2');
+
+    const dragButton = screen.getByRole('button', {name: /drag/i});
+    await user.hover(dragButton);
+    expect(
+      await screen.findByRole('tooltip', {
+        name: formatShortcutTooltip('Switch tool', ['switch-tool']),
+      }),
+    ).toBeInTheDocument();
 
     const selectButton = screen.getByRole('button', {name: /select/i});
     await user.hover(selectButton);

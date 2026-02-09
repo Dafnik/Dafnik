@@ -4,6 +4,7 @@ import {
   ArrowLeftRight,
   ArrowUpDown,
   Droplets,
+  Hand,
   Eye,
   Grid3X3,
   ImageIcon,
@@ -140,12 +141,25 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
       style={{background: 'oklch(var(--sidebar-background))'}}>
       <div className="border-border border-b-2 p-4">
         <Label className="text-muted-foreground mb-2 block text-xs">Tool</Label>
-        <div className="flex gap-1">
+        <div data-testid="tool-grid" className="grid grid-cols-2 gap-1">
+          <ShortcutTooltip content={switchToolTooltip}>
+            <button
+              type="button"
+              onClick={() => setActiveTool('drag')}
+              className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
+                activeTool === 'drag'
+                  ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}>
+              <Hand className="h-3.5 w-3.5" />
+              Drag
+            </button>
+          </ShortcutTooltip>
           <ShortcutTooltip content={switchToolTooltip}>
             <button
               type="button"
               onClick={() => setActiveTool('select')}
-              className={`flex flex-1 items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
+              className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
                 activeTool === 'select'
                   ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
@@ -158,7 +172,7 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
             <button
               type="button"
               onClick={() => setActiveTool('blur')}
-              className={`flex flex-1 items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
+              className={`flex w-full items-center justify-center gap-1.5 border-2 px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors ${
                 activeTool === 'blur'
                   ? 'bg-primary text-primary-foreground border-foreground shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'

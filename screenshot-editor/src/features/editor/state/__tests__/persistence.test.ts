@@ -4,6 +4,7 @@ import {
   LEGACY_MIGRATION_KEY,
   loadLegacySettingsOnce,
 } from '@/features/editor/state/persistence';
+import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 describe('editor persistence helpers', () => {
   it('loads legacy settings once and marks migration', () => {
@@ -31,6 +32,14 @@ describe('editor persistence helpers', () => {
     expect(second).toEqual({});
   });
 
+  it('maps legacy select tool to drag tool', () => {
+    localStorage.removeItem(LEGACY_MIGRATION_KEY);
+    localStorage.setItem('editor-active-tool', 'select');
+
+    const loaded = loadLegacySettingsOnce();
+    expect(loaded.activeTool).toBe('drag');
+  });
+
   it('partializes only persisted settings fields', () => {
     const persisted = getPersistedSettingsSlice({
       splitRatio: 55,
@@ -38,7 +47,7 @@ describe('editor persistence helpers', () => {
       brushRadius: 20,
       brushStrength: 9,
       blurType: 'normal',
-      activeTool: 'select',
+      activeTool: 'drag',
       lightImageSide: 'left',
       zoom: 120,
     });
@@ -49,9 +58,17 @@ describe('editor persistence helpers', () => {
       brushRadius: 20,
       brushStrength: 9,
       blurType: 'normal',
-      activeTool: 'select',
+      activeTool: 'drag',
       lightImageSide: 'left',
       zoom: 120,
     });
+  });
+
+  it('migrates persisted v1 select tool to drag', () => {
+    const migrate = useEditorStore.persist.getOptions().migrate;
+    expect(migrate).toBeTypeOf('function');
+
+    const migrated = migrate?.({activeTool: 'select'} as never, 1) as {activeTool: string};
+    expect(migrated.activeTool).toBe('drag');
   });
 });

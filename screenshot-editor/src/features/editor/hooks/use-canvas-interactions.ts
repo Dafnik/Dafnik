@@ -1,7 +1,23 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {PointerEvent as ReactPointerEvent, RefObject} from 'react';
+import {
+  areRectsEqual,
+  clampRectTranslation,
+  computeBlurStrokeOutlineRects,
+  computeRectUnion,
+  getResizeHandleCursor,
+  hitTestResizeHandle,
+  isPointInRect,
+  normalizeRectFromPoints,
+  resizeRectByHandle,
+  resizeRectByHandleWithAspectRatio,
+  resizeStrokeToRect,
+  translateStroke,
+  type BlurBoxRect,
+  type ResizeHandle,
+} from '@/features/editor/lib/blur-box-geometry';
 import {getSplitHandlePoint, getSplitRatioFromPoint} from '@/features/editor/lib/split-geometry';
-import type {Point} from '@/features/editor/state/types';
+import type {BlurStroke, Point} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface UseCanvasInteractionsOptions {
@@ -14,7 +30,22 @@ interface SamplingPerfStats {
   skippedPoints: number;
 }
 
+type SelectInteractionMode = 'idle' | 'marquee' | 'move' | 'resize';
+
+interface SelectTransformSession {
+  mode: 'move' | 'resize';
+  pointerStart: Point;
+  initialStrokes: BlurStroke[];
+  selectedIndices: number[];
+  selectionUnionRect: BlurBoxRect | null;
+  singleBaseRect: BlurBoxRect | null;
+  baseAspectRatio: number | null;
+  resizeHandle: ResizeHandle | null;
+  changed: boolean;
+}
+
 const SPLIT_HANDLE_HIT_RADIUS_PX = 14;
+const RESIZE_HANDLE_HIT_SIZE_PX = 14;
 const MIN_ZOOM = 10;
 const MAX_ZOOM = 500;
 const MIN_POINT_DISTANCE = 0.75;
@@ -72,13 +103,41 @@ function getAdaptiveSamplingDistance(brushRadius: number, zoom: number): number 
   return Math.min(MAX_POINT_DISTANCE, Math.max(MIN_POINT_DISTANCE, adaptiveDistance));
 }
 
+function areIndexListsEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function findTopmostRectIndexAtPoint(
+  point: Point,
+  rects: Array<BlurBoxRect | null>,
+  restrictTo?: Set<number>,
+): number | null {
+  for (let index = rects.length - 1; index >= 0; index -= 1) {
+    if (restrictTo && !restrictTo.has(index)) continue;
+    const rect = rects[index];
+    if (!rect) continue;
+    if (isPointInRect(point, rect)) return index;
+  }
+
+  return null;
+}
+
 export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasInteractionsOptions) {
   const hasSecondImage = useEditorStore((state) => Boolean(state.image2));
+  const activeTool = useEditorStore((state) => state.activeTool);
+  const blurStrokes = useEditorStore((state) => state.blurStrokes);
 
   const [isPanning, setIsPanning] = useState(false);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [isOverSplitHandle, setIsOverSplitHandle] = useState(false);
   const [cursorPos, setCursorPos] = useState<Point | null>(null);
+  const [selectCursor, setSelectCursor] = useState('default');
+  const [selectedStrokeIndices, setSelectedStrokeIndicesState] = useState<number[]>([]);
+  const [marqueeRect, setMarqueeRect] = useState<BlurBoxRect | null>(null);
 
   const lastPanPos = useRef({x: 0, y: 0});
   const activePointerId = useRef<number | null>(null);
@@ -93,6 +152,17 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const lastAcceptedPointRef = useRef<Point | null>(null);
   const lastAcceptedVectorRef = useRef<Point | null>(null);
 
+  const selectedStrokeIndicesRef = useRef<number[]>([]);
+  const selectInteractionModeRef = useRef<SelectInteractionMode>('idle');
+  const marqueeStartRef = useRef<Point | null>(null);
+  const selectTransformSessionRef = useRef<SelectTransformSession | null>(null);
+
+  const setSelectedStrokeIndices = useCallback((next: number[]) => {
+    if (areIndexListsEqual(selectedStrokeIndicesRef.current, next)) return;
+    selectedStrokeIndicesRef.current = next;
+    setSelectedStrokeIndicesState(next);
+  }, []);
+
   const getImageCoordsFromClient = useCallback(
     (clientX: number, clientY: number) => {
       const canvas = canvasRef.current;
@@ -106,6 +176,30 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       return {
         x: (clientX - rect.left) * scaleX,
         y: (clientY - rect.top) * scaleY,
+      };
+    },
+    [canvasRef],
+  );
+
+  const getResizeHandleHitSizeInCanvasSpace = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return RESIZE_HANDLE_HIT_SIZE_PX;
+
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return RESIZE_HANDLE_HIT_SIZE_PX;
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return RESIZE_HANDLE_HIT_SIZE_PX * Math.max(scaleX, scaleY);
+  }, [canvasRef]);
+
+  const clampPointToCanvas = useCallback(
+    (point: Point): Point => {
+      const canvas = canvasRef.current;
+      if (!canvas) return point;
+      return {
+        x: Math.max(0, Math.min(canvas.width, point.x)),
+        y: Math.max(0, Math.min(canvas.height, point.y)),
       };
     },
     [canvasRef],
@@ -299,7 +393,19 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const finishActiveStroke = useCallback(
     (finalPoint?: Point) => {
       const store = useEditorStore.getState();
-      if (!store.isDrawing) return;
+      if (!store.isDrawing || !store.currentStroke) return;
+      const strokeShape = store.currentStroke.shape ?? 'brush';
+
+      if (strokeShape === 'box') {
+        if (finalPoint) {
+          store.setCurrentStrokeEndpoint(finalPoint.x, finalPoint.y);
+        }
+        store.finishStroke();
+        resetStrokeQueue();
+        lastAcceptedPointRef.current = null;
+        lastAcceptedVectorRef.current = null;
+        return;
+      }
 
       if (finalPoint) {
         queueStrokePoint(finalPoint.x, finalPoint.y, {force: true});
@@ -314,6 +420,168 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
     },
     [flushPendingStrokePoints, queueStrokePoint, resetStrokeQueue],
   );
+
+  const getSelectHoverCursor = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!isWithinCanvasBounds(clientX, clientY)) return 'default';
+
+      const canvas = canvasRef.current;
+      if (!canvas) return 'default';
+
+      const coords = getImageCoordsFromClient(clientX, clientY);
+      const strokes = useEditorStore.getState().blurStrokes;
+      const rects = computeBlurStrokeOutlineRects(strokes, canvas.width, canvas.height);
+
+      const selected = selectedStrokeIndicesRef.current;
+      if (selected.length === 1) {
+        const selectedRect = rects[selected[0]];
+        if (selectedRect) {
+          const handle = hitTestResizeHandle(
+            coords,
+            selectedRect,
+            getResizeHandleHitSizeInCanvasSpace(),
+          );
+          if (handle) {
+            return getResizeHandleCursor(handle);
+          }
+        }
+      }
+
+      const selectedSet = new Set(selected);
+      const selectedHit = findTopmostRectIndexAtPoint(coords, rects, selectedSet);
+      if (selectedHit !== null) return 'move';
+
+      const anyHit = findTopmostRectIndexAtPoint(coords, rects);
+      if (anyHit !== null) return 'move';
+
+      return 'crosshair';
+    },
+    [
+      canvasRef,
+      getImageCoordsFromClient,
+      getResizeHandleHitSizeInCanvasSpace,
+      isWithinCanvasBounds,
+    ],
+  );
+
+  const applySelectMove = useCallback(
+    (coords: Point) => {
+      const session = selectTransformSessionRef.current;
+      const canvas = canvasRef.current;
+      if (!session || session.mode !== 'move' || !session.selectionUnionRect || !canvas) return;
+
+      const rawDx = coords.x - session.pointerStart.x;
+      const rawDy = coords.y - session.pointerStart.y;
+      const clampedDelta = clampRectTranslation(
+        session.selectionUnionRect,
+        rawDx,
+        rawDy,
+        canvas.width,
+        canvas.height,
+      );
+
+      const changed = Math.abs(clampedDelta.x) > 1e-4 || Math.abs(clampedDelta.y) > 1e-4;
+      session.changed = changed;
+      if (!changed) {
+        useEditorStore.setState({
+          blurStrokes: session.initialStrokes,
+        });
+        return;
+      }
+
+      const selectedSet = new Set(session.selectedIndices);
+      const nextStrokes = session.initialStrokes.map((stroke, index) => {
+        if (!selectedSet.has(index)) return stroke;
+        return translateStroke(stroke, clampedDelta.x, clampedDelta.y);
+      });
+
+      useEditorStore.setState({
+        blurStrokes: nextStrokes,
+        isDrawing: false,
+        currentStroke: null,
+      });
+    },
+    [canvasRef],
+  );
+
+  const applySelectResize = useCallback(
+    (coords: Point, keepAspectRatio: boolean) => {
+      const session = selectTransformSessionRef.current;
+      const canvas = canvasRef.current;
+      if (
+        !session ||
+        session.mode !== 'resize' ||
+        !canvas ||
+        !session.singleBaseRect ||
+        !session.resizeHandle ||
+        session.selectedIndices.length !== 1
+      ) {
+        return;
+      }
+
+      const rawDx = coords.x - session.pointerStart.x;
+      const rawDy = coords.y - session.pointerStart.y;
+      const nextRect =
+        keepAspectRatio && session.baseAspectRatio
+          ? resizeRectByHandleWithAspectRatio(
+              session.singleBaseRect,
+              session.resizeHandle,
+              rawDx,
+              rawDy,
+              canvas.width,
+              canvas.height,
+            )
+          : resizeRectByHandle(
+              session.singleBaseRect,
+              session.resizeHandle,
+              rawDx,
+              rawDy,
+              canvas.width,
+              canvas.height,
+            );
+
+      session.changed = !areRectsEqual(session.singleBaseRect, nextRect);
+      if (!session.changed) {
+        useEditorStore.setState({
+          blurStrokes: session.initialStrokes,
+        });
+        return;
+      }
+
+      const [targetIndex] = session.selectedIndices;
+      const nextStrokes = [...session.initialStrokes];
+      nextStrokes[targetIndex] = resizeStrokeToRect(
+        session.initialStrokes[targetIndex],
+        session.singleBaseRect,
+        nextRect,
+      );
+
+      useEditorStore.setState({
+        blurStrokes: nextStrokes,
+        isDrawing: false,
+        currentStroke: null,
+      });
+    },
+    [canvasRef],
+  );
+
+  const clearSelectInteraction = useCallback((options?: {cancelChanges?: boolean}) => {
+    const session = selectTransformSessionRef.current;
+    if (options?.cancelChanges && session?.changed) {
+      useEditorStore.setState({blurStrokes: session.initialStrokes});
+    }
+
+    marqueeStartRef.current = null;
+    setMarqueeRect(null);
+    selectTransformSessionRef.current = null;
+    selectInteractionModeRef.current = 'idle';
+  }, []);
+
+  const commitSelectTransformIfNeeded = useCallback(() => {
+    const session = selectTransformSessionRef.current;
+    if (!session?.changed) return;
+    useEditorStore.getState().pushHistorySnapshot();
+  }, []);
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -338,35 +606,124 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         return;
       }
 
-      const {activeTool, startStroke} = useEditorStore.getState();
+      const store = useEditorStore.getState();
+      if (event.button !== 0) return;
 
-      if (activeTool === 'select') {
+      if (store.activeTool !== 'drag' && !isWithinCanvasBounds(event.clientX, event.clientY))
+        return;
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      activePointerId.current = event.pointerId;
+      setPointerCapture(event.currentTarget, event.pointerId);
+
+      if (store.activeTool === 'drag') {
         event.preventDefault();
-        activePointerId.current = event.pointerId;
-        setPointerCapture(event.currentTarget, event.pointerId);
         setIsPanning(true);
         lastPanPos.current = {x: event.clientX, y: event.clientY};
         return;
       }
 
-      if (event.button !== 0) return;
-      if (!isWithinCanvasBounds(event.clientX, event.clientY)) return;
-
-      activePointerId.current = event.pointerId;
-      setPointerCapture(event.currentTarget, event.pointerId);
-
       const coords = getImageCoordsFromClient(event.clientX, event.clientY);
-      startStroke(coords.x, coords.y);
+      if (store.activeTool === 'select') {
+        event.preventDefault();
+        const rects = computeBlurStrokeOutlineRects(store.blurStrokes, canvas.width, canvas.height);
+        const selected = selectedStrokeIndicesRef.current;
+
+        if (selected.length === 1) {
+          const rect = rects[selected[0]];
+          if (rect) {
+            const handle = hitTestResizeHandle(coords, rect, getResizeHandleHitSizeInCanvasSpace());
+            if (handle) {
+              selectTransformSessionRef.current = {
+                mode: 'resize',
+                pointerStart: coords,
+                initialStrokes: store.blurStrokes,
+                selectedIndices: [...selected],
+                selectionUnionRect: rect,
+                singleBaseRect: rect,
+                baseAspectRatio: rect.width / Math.max(rect.height, 1e-4),
+                resizeHandle: handle,
+                changed: false,
+              };
+              selectInteractionModeRef.current = 'resize';
+              setSelectCursor(getResizeHandleCursor(handle));
+              return;
+            }
+          }
+        }
+
+        const selectedSet = new Set(selected);
+        const selectedHitIndex = findTopmostRectIndexAtPoint(coords, rects, selectedSet);
+        if (selectedHitIndex !== null && selected.length > 0) {
+          const unionRect = computeRectUnion(
+            selected.map((index) => (index >= 0 ? (rects[index] ?? null) : null)),
+          );
+          if (unionRect) {
+            selectTransformSessionRef.current = {
+              mode: 'move',
+              pointerStart: coords,
+              initialStrokes: store.blurStrokes,
+              selectedIndices: [...selected],
+              selectionUnionRect: unionRect,
+              singleBaseRect: null,
+              baseAspectRatio: null,
+              resizeHandle: null,
+              changed: false,
+            };
+            selectInteractionModeRef.current = 'move';
+            setSelectCursor('move');
+            return;
+          }
+        }
+
+        const hitIndex = findTopmostRectIndexAtPoint(coords, rects);
+        if (hitIndex !== null) {
+          const nextSelection = [hitIndex];
+          setSelectedStrokeIndices(nextSelection);
+          const hitRect = rects[hitIndex];
+          if (hitRect) {
+            selectTransformSessionRef.current = {
+              mode: 'move',
+              pointerStart: coords,
+              initialStrokes: store.blurStrokes,
+              selectedIndices: nextSelection,
+              selectionUnionRect: hitRect,
+              singleBaseRect: null,
+              baseAspectRatio: null,
+              resizeHandle: null,
+              changed: false,
+            };
+            selectInteractionModeRef.current = 'move';
+            setSelectCursor('move');
+            return;
+          }
+        }
+
+        selectInteractionModeRef.current = 'marquee';
+        marqueeStartRef.current = coords;
+        setMarqueeRect({x: coords.x, y: coords.y, width: 0, height: 0});
+        setSelectedStrokeIndices([]);
+        setSelectCursor('crosshair');
+        return;
+      }
+
+      const blurShape = event.shiftKey ? 'box' : 'brush';
+      store.startStroke(coords.x, coords.y, {shape: blurShape});
       resetStrokeQueue();
-      lastAcceptedPointRef.current = coords;
+      lastAcceptedPointRef.current = blurShape === 'brush' ? coords : null;
       lastAcceptedVectorRef.current = null;
     },
     [
+      canvasRef,
       getImageCoordsFromClient,
+      getResizeHandleHitSizeInCanvasSpace,
       isPointerNearSplitHandle,
       isWithinCanvasBounds,
       resetStrokeQueue,
       setPointerCapture,
+      setSelectedStrokeIndices,
       updateSplitRatioFromClient,
     ],
   );
@@ -399,7 +756,59 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         return;
       }
 
-      if (useEditorStore.getState().isDrawing) {
+      const store = useEditorStore.getState();
+      if (store.activeTool === 'select') {
+        const mode = selectInteractionModeRef.current;
+        if (mode === 'move') {
+          applySelectMove(coords);
+          return;
+        }
+
+        if (mode === 'resize') {
+          applySelectResize(coords, event.shiftKey);
+          return;
+        }
+
+        if (mode === 'marquee') {
+          const start = marqueeStartRef.current;
+          const canvas = canvasRef.current;
+          if (!start || !canvas) return;
+
+          const nextMarqueeRect = normalizeRectFromPoints(start, coords);
+          setMarqueeRect(nextMarqueeRect);
+
+          const rects = computeBlurStrokeOutlineRects(
+            store.blurStrokes,
+            canvas.width,
+            canvas.height,
+          );
+          const nextSelection = rects.flatMap((rect, index) =>
+            rect && nextMarqueeRect.width >= 0 && nextMarqueeRect.height >= 0
+              ? rect.x <= nextMarqueeRect.x + nextMarqueeRect.width &&
+                rect.x + rect.width >= nextMarqueeRect.x &&
+                rect.y <= nextMarqueeRect.y + nextMarqueeRect.height &&
+                rect.y + rect.height >= nextMarqueeRect.y
+                ? [index]
+                : []
+              : [],
+          );
+
+          setSelectedStrokeIndices(nextSelection);
+          return;
+        }
+
+        setSelectCursor(getSelectHoverCursor(event.clientX, event.clientY));
+        return;
+      }
+
+      if (store.isDrawing) {
+        const currentStrokeShape = store.currentStroke?.shape ?? 'brush';
+        if (currentStrokeShape === 'box') {
+          const clampedCoords = clampPointToCanvas(coords);
+          store.setCurrentStrokeEndpoint(clampedCoords.x, clampedCoords.y);
+          return;
+        }
+
         if (!isOverCanvas) {
           finishActiveStroke();
           return;
@@ -409,14 +818,20 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       }
     },
     [
+      applySelectMove,
+      applySelectResize,
+      canvasRef,
+      clampPointToCanvas,
       finishActiveStroke,
       getImageCoordsFromClient,
+      getSelectHoverCursor,
       isDraggingSplit,
       isPanning,
       isPointerNearSplitHandle,
       isWithinCanvasBounds,
       queueStrokePoint,
       scheduleCursorUpdate,
+      setSelectedStrokeIndices,
       updateSplitRatioFromClient,
     ],
   );
@@ -434,12 +849,28 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         setIsPanning(false);
       }
 
-      const isDrawing = useEditorStore.getState().isDrawing;
+      const store = useEditorStore.getState();
+      if (store.activeTool === 'select') {
+        if (
+          selectInteractionModeRef.current === 'move' ||
+          selectInteractionModeRef.current === 'resize'
+        ) {
+          commitSelectTransformIfNeeded();
+        }
+
+        clearSelectInteraction();
+        setSelectCursor(getSelectHoverCursor(event.clientX, event.clientY));
+      }
+
+      const isDrawing = store.isDrawing;
       if (isDrawing) {
+        const isBoxStroke = (store.currentStroke?.shape ?? 'brush') === 'box';
         const isOverCanvas = isWithinCanvasBounds(event.clientX, event.clientY);
-        const finalPoint = isOverCanvas
-          ? getImageCoordsFromClient(event.clientX, event.clientY)
-          : undefined;
+        const finalPoint = isBoxStroke
+          ? clampPointToCanvas(getImageCoordsFromClient(event.clientX, event.clientY))
+          : isOverCanvas
+            ? getImageCoordsFromClient(event.clientX, event.clientY)
+            : undefined;
         finishActiveStroke(finalPoint);
       }
 
@@ -447,8 +878,12 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       releasePointerCapture(event.currentTarget, event.pointerId);
     },
     [
+      clearSelectInteraction,
+      commitSelectTransformIfNeeded,
+      clampPointToCanvas,
       finishActiveStroke,
       getImageCoordsFromClient,
+      getSelectHoverCursor,
       isDraggingSplit,
       isPanning,
       isPointerNearSplitHandle,
@@ -477,12 +912,19 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         setIsDraggingSplit(false);
       }
 
+      if (selectInteractionModeRef.current === 'marquee') {
+        clearSelectInteraction();
+      }
+
+      setSelectCursor('default');
+
       if (activePointerId.current !== null) {
         releasePointerCapture(event.currentTarget, event.pointerId);
         activePointerId.current = null;
       }
     },
     [
+      clearSelectInteraction,
       finishActiveStroke,
       hasPointerCapture,
       isDraggingSplit,
@@ -511,12 +953,25 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         setIsDraggingSplit(false);
       }
 
+      if (selectInteractionModeRef.current !== 'idle') {
+        clearSelectInteraction({cancelChanges: true});
+      }
+
+      setSelectCursor('default');
+
       if (activePointerId.current !== null) {
         releasePointerCapture(event.currentTarget, event.pointerId);
         activePointerId.current = null;
       }
     },
-    [finishActiveStroke, isDraggingSplit, isPanning, releasePointerCapture, scheduleCursorUpdate],
+    [
+      clearSelectInteraction,
+      finishActiveStroke,
+      isDraggingSplit,
+      isPanning,
+      releasePointerCapture,
+      scheduleCursorUpdate,
+    ],
   );
 
   useEffect(() => {
@@ -529,6 +984,29 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       setIsOverSplitHandle(false);
     }
   }, [hasSecondImage, isDraggingSplit, isOverSplitHandle]);
+
+  useEffect(() => {
+    if (activeTool === 'select') return;
+
+    clearSelectInteraction({cancelChanges: true});
+    setSelectedStrokeIndices([]);
+    setSelectCursor('default');
+  }, [activeTool, clearSelectInteraction, setSelectedStrokeIndices]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rects = computeBlurStrokeOutlineRects(blurStrokes, canvas.width, canvas.height);
+    const filtered = selectedStrokeIndicesRef.current.filter((index) => {
+      if (index < 0 || index >= rects.length) return false;
+      return Boolean(rects[index]);
+    });
+
+    if (!areIndexListsEqual(filtered, selectedStrokeIndicesRef.current)) {
+      setSelectedStrokeIndices(filtered);
+    }
+  }, [blurStrokes, canvasRef, setSelectedStrokeIndices]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -592,6 +1070,9 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
     isDraggingSplit,
     isOverSplitHandle,
     cursorPos,
+    selectCursor,
+    selectedStrokeIndices,
+    marqueeRect,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,

@@ -16,7 +16,7 @@ const VALID_SPLIT_DIRECTIONS: SplitDirection[] = [
   'diagonal-tl-br',
   'diagonal-tr-bl',
 ];
-const VALID_ACTIVE_TOOLS: ActiveTool[] = ['select', 'blur'];
+const VALID_ACTIVE_TOOLS: ActiveTool[] = ['drag', 'select', 'blur'];
 const VALID_BLUR_TYPES: BlurType[] = ['normal', 'pixelated'];
 const VALID_LIGHT_SIDES: LightImageSide[] = ['left', 'right'];
 
@@ -77,7 +77,7 @@ export function loadLegacySettingsOnce(): Partial<PersistedSettings> {
 
     const activeTool = readLegacySetting('active-tool');
     if (activeTool && VALID_ACTIVE_TOOLS.includes(activeTool as ActiveTool)) {
-      legacy.activeTool = activeTool as ActiveTool;
+      legacy.activeTool = activeTool === 'select' ? 'drag' : (activeTool as ActiveTool);
     }
 
     const lightImageSide = readLegacySetting('light-image-side');

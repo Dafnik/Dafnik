@@ -12,7 +12,7 @@ const BRUSH_STRENGTH_MIN = 1;
 const BRUSH_STRENGTH_MAX = 30;
 const ZOOM_MIN = 10;
 const ZOOM_MAX = 500;
-const BLUR_TOOL_ORDER = ['select', 'blur'] as const;
+const BLUR_TOOL_ORDER = ['drag', 'select', 'blur'] as const;
 const BLUR_TYPE_ORDER = ['normal', 'pixelated'] as const;
 const SPLIT_DIRECTION_ORDER: SplitDirection[] = [
   'vertical',

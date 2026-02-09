@@ -56,6 +56,9 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
     isDraggingSplit,
     isOverSplitHandle,
     cursorPos,
+    selectCursor,
+    selectedStrokeIndices,
+    marqueeRect,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
@@ -73,11 +76,13 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
   );
 
   const isBlurTool = activeTool === 'blur';
+  const isDragTool = activeTool === 'drag';
   const isSelectTool = activeTool === 'select';
   const splitHandlePoint = useMemo(() => {
     if (!image2) return null;
     return getSplitHandlePoint(canvasWidth, canvasHeight, splitDirection, splitRatio / 100);
   }, [canvasHeight, canvasWidth, image2, splitDirection, splitRatio]);
+  const effectiveShowOutlines = showBlurOutlines || isSelectTool;
 
   const splitCursor =
     splitDirection === 'vertical'
@@ -94,11 +99,13 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
       ? splitCursor
       : isPanning
         ? 'grabbing'
-        : isSelectTool
+        : isDragTool
           ? 'grab'
-          : isBlurTool
-            ? 'crosshair'
-            : 'default';
+          : isSelectTool
+            ? selectCursor
+            : isBlurTool
+              ? 'crosshair'
+              : 'default';
 
   useEffect(() => {
     panRef.current = {x: panX, y: panY};
@@ -204,10 +211,15 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
           ) : null}
 
           <BlurOutlineOverlay
-            visible={showBlurOutlines}
+            visible={effectiveShowOutlines}
             strokes={allStrokes}
             canvasWidth={canvasWidth}
             canvasHeight={canvasHeight}
+            selectedStrokeIndices={selectedStrokeIndices}
+            marqueeRect={marqueeRect}
+            showResizeHandles={isSelectTool && selectedStrokeIndices.length === 1}
+            scale={scale}
+            forceDashedStyle={effectiveShowOutlines}
           />
 
           <BrushCursor

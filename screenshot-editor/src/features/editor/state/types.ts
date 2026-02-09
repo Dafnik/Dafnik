@@ -1,6 +1,7 @@
 export type SplitDirection = 'horizontal' | 'vertical' | 'diagonal-tl-br' | 'diagonal-tr-bl';
 export type BlurType = 'normal' | 'pixelated';
-export type ActiveTool = 'select' | 'blur';
+export type BlurStrokeShape = 'brush' | 'box';
+export type ActiveTool = 'drag' | 'select' | 'blur';
 export type LightImageSide = 'left' | 'right';
 
 export interface Point {
@@ -13,6 +14,7 @@ export interface BlurStroke {
   radius: number;
   strength: number;
   blurType: BlurType;
+  shape?: BlurStrokeShape;
 }
 
 export type HistoryBlurStrokes = ReadonlyArray<BlurStroke>;
@@ -27,6 +29,7 @@ export interface NormalizedBlurStroke {
   radiusRatio: number;
   strength: number;
   blurType: BlurType;
+  shape?: BlurStrokeShape;
 }
 
 export interface BlurTemplate {
@@ -159,7 +162,8 @@ export interface EditorStoreActions {
   setLightImageSide: (side: LightImageSide, options?: Partial<SetLightImageSideOptions>) => void;
   setZoom: (value: number) => void;
   setPan: (x: number, y: number) => void;
-  startStroke: (x: number, y: number) => void;
+  startStroke: (x: number, y: number, options?: {shape?: BlurStrokeShape}) => void;
+  setCurrentStrokeEndpoint: (x: number, y: number) => void;
   appendStrokePoints: (points: Point[]) => void;
   appendStrokePoint: (x: number, y: number) => void;
   finishStroke: () => void;
@@ -203,7 +207,7 @@ export const DEFAULT_SETTINGS: PersistedSettings = {
   brushRadius: 20,
   brushStrength: 10,
   blurType: 'normal',
-  activeTool: 'select',
+  activeTool: 'drag',
   lightImageSide: 'left',
   zoom: 100,
 };

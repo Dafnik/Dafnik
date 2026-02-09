@@ -201,17 +201,22 @@ describe('useEditorShortcuts', () => {
     expect(useEditorStore.getState().zoom).toBe(230);
   });
 
-  it('toggles blur type, switches tool, and opens export modal', () => {
-    useEditorStore.setState({blurType: 'normal', activeTool: 'select', showExportModal: false});
+  it('toggles blur type, cycles drag/select/blur tools, and opens export modal', () => {
+    useEditorStore.setState({blurType: 'normal', activeTool: 'drag', showExportModal: false});
     render(<ShortcutsHarness />);
 
     fireEvent.keyDown(window, {key: 'b', ctrlKey: true});
     fireEvent.keyDown(window, {key: 't', ctrlKey: true});
+    expect(useEditorStore.getState().activeTool).toBe('select');
+    fireEvent.keyDown(window, {key: 't', ctrlKey: true});
+    expect(useEditorStore.getState().activeTool).toBe('blur');
+    fireEvent.keyDown(window, {key: 't', ctrlKey: true});
+    expect(useEditorStore.getState().activeTool).toBe('drag');
     fireEvent.keyDown(window, {key: 'e', ctrlKey: true});
 
     const state = useEditorStore.getState();
     expect(state.blurType).toBe('pixelated');
-    expect(state.activeTool).toBe('blur');
+    expect(state.activeTool).toBe('drag');
     expect(state.showExportModal).toBe(true);
   });
 

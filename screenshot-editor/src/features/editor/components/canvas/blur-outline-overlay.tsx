@@ -1,4 +1,9 @@
 import {useMemo} from 'react';
+import {
+  computeBlurStrokeOutlineRects,
+  getResizeHandlePoints,
+  type BlurBoxRect,
+} from '@/features/editor/lib/blur-box-geometry';
 import type {BlurStroke} from '@/features/editor/state/types';
 
 interface BlurOutlineOverlayProps {
@@ -6,6 +11,18 @@ interface BlurOutlineOverlayProps {
   strokes: BlurStroke[];
   canvasWidth: number;
   canvasHeight: number;
+  selectedStrokeIndices?: number[];
+  marqueeRect?: BlurBoxRect | null;
+  showResizeHandles?: boolean;
+  scale?: number;
+  forceDashedStyle?: boolean;
+}
+
+interface OverlayHandlePoint {
+  key: string;
+  handle: string;
+  x: number;
+  y: number;
 }
 
 export function BlurOutlineOverlay({
@@ -13,55 +30,93 @@ export function BlurOutlineOverlay({
   strokes,
   canvasWidth,
   canvasHeight,
+  selectedStrokeIndices = [],
+  marqueeRect = null,
+  showResizeHandles = false,
+  scale = 1,
+  forceDashedStyle = false,
 }: BlurOutlineOverlayProps) {
-  const rects = useMemo(() => {
-    return strokes.flatMap((stroke) => {
-      if (stroke.points.length === 0) return [];
+  const rects = useMemo(
+    () => computeBlurStrokeOutlineRects(strokes, canvasWidth, canvasHeight),
+    [canvasHeight, canvasWidth, strokes],
+  );
 
-      let minX = Number.POSITIVE_INFINITY;
-      let minY = Number.POSITIVE_INFINITY;
-      let maxX = Number.NEGATIVE_INFINITY;
-      let maxY = Number.NEGATIVE_INFINITY;
+  const selectedSet = useMemo(() => new Set(selectedStrokeIndices), [selectedStrokeIndices]);
 
-      for (const point of stroke.points) {
-        minX = Math.min(minX, point.x);
-        minY = Math.min(minY, point.y);
-        maxX = Math.max(maxX, point.x);
-        maxY = Math.max(maxY, point.y);
-      }
+  const singleSelectedRect =
+    selectedStrokeIndices.length === 1 ? (rects[selectedStrokeIndices[0]] ?? null) : null;
+  const handlePoints = useMemo<OverlayHandlePoint[]>(() => {
+    if (!showResizeHandles || !singleSelectedRect) return [];
+    return getResizeHandlePoints(singleSelectedRect).map((handlePoint) => ({
+      key: `single-${handlePoint.handle}`,
+      handle: handlePoint.handle,
+      x: handlePoint.x,
+      y: handlePoint.y,
+    }));
+  }, [showResizeHandles, singleSelectedRect]);
 
-      const x = Math.max(0, minX - stroke.radius);
-      const y = Math.max(0, minY - stroke.radius);
-      const right = Math.min(canvasWidth, maxX + stroke.radius);
-      const bottom = Math.min(canvasHeight, maxY + stroke.radius);
-      const width = right - x;
-      const height = bottom - y;
+  if (!visible) return null;
 
-      if (width <= 0 || height <= 0) return [];
-      return [{x, y, width, height}];
-    });
-  }, [canvasHeight, canvasWidth, strokes]);
+  const visibleRects = rects.filter((rect): rect is BlurBoxRect => rect !== null);
+  if (visibleRects.length === 0 && !marqueeRect) return null;
 
-  if (!visible || rects.length === 0) return null;
+  const handleSize = Math.max(6, Math.min(12, 10 / Math.max(scale, 0.1)));
 
   return (
     <svg
       className="pointer-events-none absolute inset-0"
       viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
       preserveAspectRatio="none">
-      {rects.map((rect, index) => (
+      {rects.map((rect, index) => {
+        if (!rect) return null;
+
+        const selected = selectedSet.has(index) || forceDashedStyle;
+        return (
+          <rect
+            key={`${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`}
+            data-testid={selected ? 'blur-outline-selected' : 'blur-outline'}
+            x={rect.x}
+            y={rect.y}
+            width={rect.width}
+            height={rect.height}
+            fill="none"
+            stroke={selected ? '#22c55e' : '#ef4444'}
+            strokeWidth={selected ? 2.5 : 2}
+            strokeDasharray={selected ? '5 3' : undefined}
+            vectorEffect="non-scaling-stroke"
+          />
+        );
+      })}
+
+      {handlePoints.map((handlePoint) => (
         <rect
-          key={`${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`}
-          x={rect.x}
-          y={rect.y}
-          width={rect.width}
-          height={rect.height}
-          fill="none"
-          stroke="#ef4444"
-          strokeWidth={2}
+          key={`handle-${handlePoint.key}`}
+          data-testid="blur-outline-handle"
+          x={handlePoint.x - handleSize / 2}
+          y={handlePoint.y - handleSize / 2}
+          width={handleSize}
+          height={handleSize}
+          fill="#ffffff"
+          stroke="#16a34a"
+          strokeWidth={1.5}
           vectorEffect="non-scaling-stroke"
         />
       ))}
+
+      {marqueeRect ? (
+        <rect
+          data-testid="blur-outline-marquee"
+          x={marqueeRect.x}
+          y={marqueeRect.y}
+          width={marqueeRect.width}
+          height={marqueeRect.height}
+          fill="rgba(34, 197, 94, 0.15)"
+          stroke="#22c55e"
+          strokeWidth={1.5}
+          strokeDasharray="6 4"
+          vectorEffect="non-scaling-stroke"
+        />
+      ) : null}
     </svg>
   );
 }
