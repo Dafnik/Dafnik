@@ -199,16 +199,22 @@ export const useEditorStore = create<EditorStoreState>()(
         });
       },
 
-      appendStrokePoint: (x, y) => {
+      appendStrokePoints: (points) => {
+        if (points.length === 0) return;
+
         set((state) => {
           if (!state.isDrawing || !state.currentStroke) return {};
           return {
             currentStroke: {
               ...state.currentStroke,
-              points: [...state.currentStroke.points, {x, y}],
+              points: [...state.currentStroke.points, ...points],
             },
           };
         });
+      },
+
+      appendStrokePoint: (x, y) => {
+        get().appendStrokePoints([{x, y}]);
       },
 
       finishStroke: () => {

@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef} from 'react';
-import type {RefObject} from 'react';
+import type {MutableRefObject, RefObject} from 'react';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import type {BlurStroke, SplitDirection} from '@/features/editor/state/types';
 import {getSplitLineSegment} from '@/features/editor/lib/split-geometry';
@@ -8,6 +8,57 @@ interface UseCanvasRendererOptions {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   containerRef: RefObject<HTMLDivElement | null>;
   onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
+}
+
+interface RenderPerfStats {
+  frameCount: number;
+  committedRebuilds: number;
+  totalRenderMs: number;
+  lastRenderMs: number;
+}
+
+interface RenderQueueState {
+  frameId: number;
+  needsCommittedRebuild: boolean;
+}
+
+function getRenderPerfStats(): RenderPerfStats | null {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return null;
+
+  const perfTarget = window as unknown as {
+    __SCREENSHOT_EDITOR_PERF__?: {renderer?: RenderPerfStats};
+  };
+  if (!perfTarget.__SCREENSHOT_EDITOR_PERF__) {
+    perfTarget.__SCREENSHOT_EDITOR_PERF__ = {};
+  }
+  if (!perfTarget.__SCREENSHOT_EDITOR_PERF__.renderer) {
+    perfTarget.__SCREENSHOT_EDITOR_PERF__.renderer = {
+      frameCount: 0,
+      committedRebuilds: 0,
+      totalRenderMs: 0,
+      lastRenderMs: 0,
+    };
+  }
+
+  return perfTarget.__SCREENSHOT_EDITOR_PERF__.renderer;
+}
+
+function getReusableCanvas(
+  canvasRef: MutableRefObject<HTMLCanvasElement | null>,
+  width: number,
+  height: number,
+): HTMLCanvasElement {
+  if (!canvasRef.current) {
+    canvasRef.current = document.createElement('canvas');
+  }
+
+  const canvas = canvasRef.current;
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  return canvas;
 }
 
 export function useCanvasRenderer({
@@ -26,10 +77,12 @@ export function useCanvasRenderer({
 
   const img1Ref = useRef<HTMLImageElement | null>(null);
   const img2Ref = useRef<HTMLImageElement | null>(null);
-  const animFrameRef = useRef<number>(0);
-  const renderCanvasRef = useRef<() => void>(() => {});
+  const committedLayerRef = useRef<HTMLCanvasElement | null>(null);
+  const blurScratchRef = useRef<HTMLCanvasElement | null>(null);
+  const pixelScratchRef = useRef<HTMLCanvasElement | null>(null);
 
-  const allStrokes = currentStroke ? [...blurStrokes, currentStroke] : blurStrokes;
+  const renderQueueRef = useRef<RenderQueueState>({frameId: 0, needsCommittedRebuild: false});
+  const previewStrokeRef = useRef<BlurStroke | null>(currentStroke);
 
   useEffect(() => {
     onCanvasReady?.(canvasRef.current);
@@ -39,6 +92,10 @@ export function useCanvasRenderer({
   const applyBlurToCanvas = useCallback(
     (ctx: CanvasRenderingContext2D, strokes: BlurStroke[], width: number, height: number) => {
       if (strokes.length === 0) return;
+
+      const blurScratchCanvas = getReusableCanvas(blurScratchRef, width, height);
+      const blurScratchCtx = blurScratchCanvas.getContext('2d');
+      if (!blurScratchCtx) return;
 
       for (const stroke of strokes) {
         if (stroke.points.length === 0) continue;
@@ -61,7 +118,7 @@ export function useCanvasRenderer({
           const p1 = stroke.points[i];
           const dx = p1.x - p0.x;
           const dy = p1.y - p0.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+          const dist = Math.hypot(dx, dy);
           if (dist === 0) continue;
           const nx = (-dy / dist) * stroke.radius;
           const ny = (dx / dist) * stroke.radius;
@@ -75,36 +132,33 @@ export function useCanvasRenderer({
 
         if (stroke.blurType === 'pixelated') {
           const pixelSize = Math.max(2, Math.round(stroke.strength * 1.5));
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = width;
-          tempCanvas.height = height;
-          const tempCtx = tempCanvas.getContext('2d');
-          if (!tempCtx) continue;
-          tempCtx.drawImage(ctx.canvas, 0, 0);
 
-          const smallCanvas = document.createElement('canvas');
+          blurScratchCtx.clearRect(0, 0, width, height);
+          blurScratchCtx.drawImage(ctx.canvas, 0, 0);
+
           const sw = Math.max(1, Math.round(width / pixelSize));
           const sh = Math.max(1, Math.round(height / pixelSize));
-          smallCanvas.width = sw;
-          smallCanvas.height = sh;
-          const smallCtx = smallCanvas.getContext('2d');
-          if (!smallCtx) continue;
-          smallCtx.imageSmoothingEnabled = false;
-          smallCtx.drawImage(tempCanvas, 0, 0, sw, sh);
+          const pixelScratchCanvas = getReusableCanvas(pixelScratchRef, sw, sh);
+          const pixelScratchCtx = pixelScratchCanvas.getContext('2d');
+          if (!pixelScratchCtx) {
+            ctx.restore();
+            continue;
+          }
+
+          pixelScratchCtx.clearRect(0, 0, sw, sh);
+          pixelScratchCtx.imageSmoothingEnabled = false;
+          pixelScratchCtx.drawImage(blurScratchCanvas, 0, 0, sw, sh);
 
           ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(smallCanvas, 0, 0, sw, sh, 0, 0, width, height);
+          ctx.drawImage(pixelScratchCanvas, 0, 0, sw, sh, 0, 0, width, height);
           ctx.imageSmoothingEnabled = true;
         } else {
           const blurAmount = stroke.strength * 2;
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = width;
-          tempCanvas.height = height;
-          const tempCtx = tempCanvas.getContext('2d');
-          if (!tempCtx) continue;
-          tempCtx.filter = `blur(${blurAmount}px)`;
-          tempCtx.drawImage(ctx.canvas, 0, 0);
-          ctx.drawImage(tempCanvas, 0, 0);
+          blurScratchCtx.clearRect(0, 0, width, height);
+          blurScratchCtx.filter = `blur(${blurAmount}px)`;
+          blurScratchCtx.drawImage(ctx.canvas, 0, 0);
+          blurScratchCtx.filter = 'none';
+          ctx.drawImage(blurScratchCanvas, 0, 0);
         }
 
         ctx.restore();
@@ -237,123 +291,211 @@ export function useCanvasRenderer({
       ctx.beginPath();
       ctx.moveTo(segment.start.x, segment.start.y);
       ctx.lineTo(segment.end.x, segment.end.y);
-
       ctx.stroke();
       ctx.restore();
     },
     [],
   );
 
-  const renderCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
+  const drawBaseLayer = useCallback(
+    (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+      const img1 = img1Ref.current;
+      if (!img1) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      const img2 = img2Ref.current;
 
+      ctx.clearRect(0, 0, width, height);
+
+      if (img2 && image2) {
+        const ratio = splitRatio / 100;
+
+        ctx.save();
+        buildSplitClipPath(ctx, width, height, splitDirection, ratio, 'first');
+        ctx.clip();
+        ctx.drawImage(img1, 0, 0, width, height);
+        ctx.restore();
+
+        ctx.save();
+        buildSplitClipPath(ctx, width, height, splitDirection, ratio, 'second');
+        ctx.clip();
+        ctx.drawImage(img2, 0, 0, width, height);
+        ctx.restore();
+
+        drawSplitLine(ctx, width, height, splitDirection, ratio);
+      } else {
+        ctx.drawImage(img1, 0, 0, width, height);
+      }
+    },
+    [buildSplitClipPath, drawSplitLine, image2, splitDirection, splitRatio],
+  );
+
+  const rebuildCommittedLayer = useCallback(() => {
     const img1 = img1Ref.current;
-    if (!img1) return;
+    if (!img1) return null;
 
     const width = imageWidth || img1.naturalWidth;
     const height = imageHeight || img1.naturalHeight;
 
-    canvas.width = width;
-    canvas.height = height;
+    const committedCanvas = getReusableCanvas(committedLayerRef, width, height);
+    const committedCtx = committedCanvas.getContext('2d');
+    if (!committedCtx) return null;
 
-    ctx.clearRect(0, 0, width, height);
+    drawBaseLayer(committedCtx, width, height);
+    applyBlurToCanvas(committedCtx, blurStrokes, width, height);
 
-    const img2 = img2Ref.current;
+    return committedCanvas;
+  }, [applyBlurToCanvas, blurStrokes, drawBaseLayer, imageHeight, imageWidth]);
 
-    if (img2 && image2) {
-      const ratio = splitRatio / 100;
+  const renderVisibleLayer = useCallback(
+    (previewStroke: BlurStroke | null) => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      const img1 = img1Ref.current;
+      if (!canvas || !container || !img1) return;
 
-      ctx.save();
-      buildSplitClipPath(ctx, width, height, splitDirection, ratio, 'first');
-      ctx.clip();
-      ctx.drawImage(img1, 0, 0, width, height);
-      ctx.restore();
+      const width = imageWidth || img1.naturalWidth;
+      const height = imageHeight || img1.naturalHeight;
 
-      ctx.save();
-      buildSplitClipPath(ctx, width, height, splitDirection, ratio, 'second');
-      ctx.clip();
-      ctx.drawImage(img2, 0, 0, width, height);
-      ctx.restore();
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
 
-      drawSplitLine(ctx, width, height, splitDirection, ratio);
-    } else {
-      ctx.drawImage(img1, 0, 0, width, height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      let committedCanvas = committedLayerRef.current;
+      if (
+        !committedCanvas ||
+        committedCanvas.width !== width ||
+        committedCanvas.height !== height
+      ) {
+        committedCanvas = rebuildCommittedLayer();
+      }
+
+      if (committedCanvas) {
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(committedCanvas, 0, 0);
+      } else {
+        drawBaseLayer(ctx, width, height);
+      }
+
+      if (previewStroke && previewStroke.points.length > 0) {
+        applyBlurToCanvas(ctx, [previewStroke], width, height);
+      }
+    },
+    [
+      applyBlurToCanvas,
+      canvasRef,
+      containerRef,
+      drawBaseLayer,
+      imageHeight,
+      imageWidth,
+      rebuildCommittedLayer,
+    ],
+  );
+
+  const flushRenderQueue = useCallback(() => {
+    const queue = renderQueueRef.current;
+    queue.frameId = 0;
+
+    const perfStats = getRenderPerfStats();
+    const startTime = perfStats ? performance.now() : 0;
+
+    if (queue.needsCommittedRebuild) {
+      queue.needsCommittedRebuild = false;
+      rebuildCommittedLayer();
+      if (perfStats) {
+        perfStats.committedRebuilds += 1;
+      }
     }
 
-    applyBlurToCanvas(ctx, allStrokes, width, height);
-  }, [
-    allStrokes,
-    applyBlurToCanvas,
-    buildSplitClipPath,
-    canvasRef,
-    containerRef,
-    drawSplitLine,
-    image2,
-    imageHeight,
-    imageWidth,
-    splitDirection,
-    splitRatio,
-  ]);
-  renderCanvasRef.current = renderCanvas;
+    renderVisibleLayer(previewStrokeRef.current);
+
+    if (perfStats) {
+      const renderMs = performance.now() - startTime;
+      perfStats.frameCount += 1;
+      perfStats.lastRenderMs = renderMs;
+      perfStats.totalRenderMs += renderMs;
+    }
+  }, [rebuildCommittedLayer, renderVisibleLayer]);
+
+  const scheduleRender = useCallback(
+    (options?: {rebuildCommitted: boolean; previewStroke: BlurStroke | null}) => {
+      if (options) {
+        previewStrokeRef.current = options.previewStroke;
+        if (options.rebuildCommitted) {
+          renderQueueRef.current.needsCommittedRebuild = true;
+        }
+      }
+
+      if (renderQueueRef.current.frameId) return;
+      renderQueueRef.current.frameId = requestAnimationFrame(flushRenderQueue);
+    },
+    [flushRenderQueue],
+  );
 
   useEffect(() => {
     if (!image1) {
       img1Ref.current = null;
-      renderCanvasRef.current();
+      committedLayerRef.current = null;
+      scheduleRender({rebuildCommitted: true, previewStroke: null});
       return;
     }
 
     const image = new Image();
     image.crossOrigin = 'anonymous';
     let cancelled = false;
+
     image.onload = () => {
       if (cancelled) return;
       img1Ref.current = image;
-      renderCanvasRef.current();
+      scheduleRender({rebuildCommitted: true, previewStroke: previewStrokeRef.current});
     };
     image.src = image1;
+
     return () => {
       cancelled = true;
     };
-  }, [image1]);
+  }, [image1, scheduleRender]);
 
   useEffect(() => {
     if (!image2) {
       img2Ref.current = null;
-      renderCanvasRef.current();
+      scheduleRender({rebuildCommitted: true, previewStroke: previewStrokeRef.current});
       return;
     }
 
     const image = new Image();
     image.crossOrigin = 'anonymous';
     let cancelled = false;
+
     image.onload = () => {
       if (cancelled) return;
       img2Ref.current = image;
-      renderCanvasRef.current();
+      scheduleRender({rebuildCommitted: true, previewStroke: previewStrokeRef.current});
     };
     image.src = image2;
+
     return () => {
       cancelled = true;
     };
-  }, [image2]);
+  }, [image2, scheduleRender]);
 
   useEffect(() => {
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-    }
+    scheduleRender({rebuildCommitted: true, previewStroke: previewStrokeRef.current});
+  }, [blurStrokes, image2, imageHeight, imageWidth, scheduleRender, splitDirection, splitRatio]);
 
-    animFrameRef.current = requestAnimationFrame(renderCanvas);
+  useEffect(() => {
+    previewStrokeRef.current = currentStroke;
+    scheduleRender({rebuildCommitted: false, previewStroke: currentStroke});
+  }, [currentStroke, scheduleRender]);
 
+  useEffect(() => {
     return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
+      if (renderQueueRef.current.frameId) {
+        cancelAnimationFrame(renderQueueRef.current.frameId);
       }
     };
-  }, [renderCanvas]);
+  }, []);
 }

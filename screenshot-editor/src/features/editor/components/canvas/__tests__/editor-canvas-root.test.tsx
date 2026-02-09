@@ -171,6 +171,54 @@ describe('EditorCanvasRoot', () => {
     expect(currentStroke).toBeNull();
   });
 
+  it('simplifies dense blur pointer moves to reduce point churn', () => {
+    useEditorStore.setState({
+      imageWidth: 300,
+      imageHeight: 150,
+      image2: null,
+      activeTool: 'blur',
+      brushRadius: 20,
+      zoom: 100,
+      blurStrokes: [],
+      currentStroke: null,
+      isDrawing: false,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas).toBeInTheDocument();
+    mockCanvasRect(canvas);
+
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+
+    fireEvent.pointerDown(backgroundContainer, {
+      button: 0,
+      pointerId: 4,
+      clientX: 40,
+      clientY: 40,
+    });
+
+    const totalMoves = 40;
+    for (let index = 1; index <= totalMoves; index += 1) {
+      fireEvent.pointerMove(backgroundContainer, {
+        pointerId: 4,
+        clientX: 40 + index * 0.35,
+        clientY: 40 + index * 0.15,
+      });
+    }
+
+    fireEvent.pointerUp(backgroundContainer, {
+      pointerId: 4,
+      clientX: 58,
+      clientY: 46,
+    });
+
+    const stroke = useEditorStore.getState().blurStrokes[0];
+    expect(stroke).toBeDefined();
+    expect(stroke.points.length).toBeLessThan(totalMoves + 1);
+    expect(stroke.points.length).toBeGreaterThan(2);
+  });
+
   it('zooms toward the pointer position on wheel input', () => {
     useEditorStore.setState({
       imageWidth: 300,

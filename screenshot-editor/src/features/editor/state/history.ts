@@ -1,15 +1,4 @@
-import type {BlurStroke, EditorStoreState, HistorySnapshot} from './types';
-
-function cloneStroke(stroke: BlurStroke): BlurStroke {
-  return {
-    ...stroke,
-    points: stroke.points.map((point) => ({...point})),
-  };
-}
-
-export function cloneStrokes(strokes: BlurStroke[]): BlurStroke[] {
-  return strokes.map(cloneStroke);
-}
+import type {EditorStoreState, HistorySnapshot} from './types';
 
 export function createHistorySnapshot(
   state: Pick<
@@ -22,7 +11,8 @@ export function createHistorySnapshot(
     image2: state.image2,
     splitRatio: state.splitRatio,
     splitDirection: state.splitDirection,
-    blurStrokes: cloneStrokes(state.blurStrokes),
+    // Keep structural sharing for committed strokes to avoid deep-copy amplification.
+    blurStrokes: state.blurStrokes,
   };
 }
 
@@ -34,7 +24,7 @@ export function applyHistorySnapshot(
     image2: snapshot.image2,
     splitRatio: snapshot.splitRatio,
     splitDirection: snapshot.splitDirection,
-    blurStrokes: cloneStrokes(snapshot.blurStrokes),
+    blurStrokes: snapshot.blurStrokes as EditorStoreState['blurStrokes'],
   };
 }
 

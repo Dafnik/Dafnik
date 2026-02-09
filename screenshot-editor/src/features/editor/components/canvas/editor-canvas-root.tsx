@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useRef} from 'react';
+import {useShallow} from 'zustand/react/shallow';
 import {getSplitHandlePoint} from '@/features/editor/lib/split-geometry';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {useCanvasRenderer} from '@/features/editor/hooks/use-canvas-renderer';
@@ -14,20 +15,39 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const imageWidth = useEditorStore((state) => state.imageWidth);
-  const imageHeight = useEditorStore((state) => state.imageHeight);
-  const image2 = useEditorStore((state) => state.image2);
-  const splitDirection = useEditorStore((state) => state.splitDirection);
-  const splitRatio = useEditorStore((state) => state.splitRatio);
-  const zoom = useEditorStore((state) => state.zoom);
-  const panX = useEditorStore((state) => state.panX);
-  const panY = useEditorStore((state) => state.panY);
-  const activeTool = useEditorStore((state) => state.activeTool);
-  const brushRadius = useEditorStore((state) => state.brushRadius);
-  const showBlurOutlines = useEditorStore((state) => state.showBlurOutlines);
-  const blurStrokes = useEditorStore((state) => state.blurStrokes);
-  const currentStroke = useEditorStore((state) => state.currentStroke);
-  const setPan = useEditorStore((state) => state.setPan);
+  const {
+    imageWidth,
+    imageHeight,
+    image2,
+    splitDirection,
+    splitRatio,
+    zoom,
+    panX,
+    panY,
+    activeTool,
+    brushRadius,
+    showBlurOutlines,
+    blurStrokes,
+    currentStroke,
+    setPan,
+  } = useEditorStore(
+    useShallow((state) => ({
+      imageWidth: state.imageWidth,
+      imageHeight: state.imageHeight,
+      image2: state.image2,
+      splitDirection: state.splitDirection,
+      splitRatio: state.splitRatio,
+      zoom: state.zoom,
+      panX: state.panX,
+      panY: state.panY,
+      activeTool: state.activeTool,
+      brushRadius: state.brushRadius,
+      showBlurOutlines: state.showBlurOutlines,
+      blurStrokes: state.blurStrokes,
+      currentStroke: state.currentStroke,
+      setPan: state.setPan,
+    })),
+  );
 
   useCanvasRenderer({canvasRef, containerRef, onCanvasReady});
 

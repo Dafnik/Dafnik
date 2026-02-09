@@ -15,6 +15,8 @@ export interface BlurStroke {
   blurType: BlurType;
 }
 
+export type HistoryBlurStrokes = ReadonlyArray<BlurStroke>;
+
 export interface NormalizedPoint {
   xRatio: number;
   yRatio: number;
@@ -42,7 +44,7 @@ export interface HistorySnapshot {
   image2: string | null;
   splitRatio: number;
   splitDirection: SplitDirection;
-  blurStrokes: BlurStroke[];
+  blurStrokes: HistoryBlurStrokes;
 }
 
 export interface DocumentSlice {
@@ -156,6 +158,7 @@ export interface EditorStoreActions {
   setZoom: (value: number) => void;
   setPan: (x: number, y: number) => void;
   startStroke: (x: number, y: number) => void;
+  appendStrokePoints: (points: Point[]) => void;
   appendStrokePoint: (x: number, y: number) => void;
   finishStroke: () => void;
   cancelStroke: () => void;

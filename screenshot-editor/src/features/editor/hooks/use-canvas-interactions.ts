@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {PointerEvent as ReactPointerEvent, RefObject} from 'react';
 import {getSplitHandlePoint, getSplitRatioFromPoint} from '@/features/editor/lib/split-geometry';
+import type {Point} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface UseCanvasInteractionsOptions {
@@ -8,9 +9,18 @@ interface UseCanvasInteractionsOptions {
   containerRef: RefObject<HTMLDivElement | null>;
 }
 
+interface SamplingPerfStats {
+  acceptedPoints: number;
+  skippedPoints: number;
+}
+
 const SPLIT_HANDLE_HIT_RADIUS_PX = 14;
 const MIN_ZOOM = 10;
 const MAX_ZOOM = 500;
+const MIN_POINT_DISTANCE = 0.75;
+const MAX_POINT_DISTANCE = 5;
+const DIRECTION_CHANGE_DOT_THRESHOLD = 0.96;
+const CURSOR_EPSILON = 0.25;
 
 function clampZoom(value: number): number {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
@@ -30,28 +40,58 @@ function normalizeWheelDelta(event: WheelEvent): number {
   return event.deltaY;
 }
 
+function getSamplingPerfStats(): SamplingPerfStats | null {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return null;
+
+  const perfTarget = window as unknown as {
+    __SCREENSHOT_EDITOR_PERF__?: {sampling?: SamplingPerfStats};
+  };
+  if (!perfTarget.__SCREENSHOT_EDITOR_PERF__) {
+    perfTarget.__SCREENSHOT_EDITOR_PERF__ = {};
+  }
+  if (!perfTarget.__SCREENSHOT_EDITOR_PERF__.sampling) {
+    perfTarget.__SCREENSHOT_EDITOR_PERF__.sampling = {
+      acceptedPoints: 0,
+      skippedPoints: 0,
+    };
+  }
+
+  return perfTarget.__SCREENSHOT_EDITOR_PERF__.sampling;
+}
+
+function areCursorPositionsEqual(a: Point | null, b: Point | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+
+  return Math.abs(a.x - b.x) < CURSOR_EPSILON && Math.abs(a.y - b.y) < CURSOR_EPSILON;
+}
+
+function getAdaptiveSamplingDistance(brushRadius: number, zoom: number): number {
+  const zoomFactor = 100 / Math.max(zoom, MIN_ZOOM);
+  const adaptiveDistance = brushRadius * 0.12 * zoomFactor;
+  return Math.min(MAX_POINT_DISTANCE, Math.max(MIN_POINT_DISTANCE, adaptiveDistance));
+}
+
 export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasInteractionsOptions) {
-  const activeTool = useEditorStore((state) => state.activeTool);
-  const image2 = useEditorStore((state) => state.image2);
-  const splitDirection = useEditorStore((state) => state.splitDirection);
-  const splitRatio = useEditorStore((state) => state.splitRatio);
-  const panX = useEditorStore((state) => state.panX);
-  const panY = useEditorStore((state) => state.panY);
-  const isDrawing = useEditorStore((state) => state.isDrawing);
-  const startStroke = useEditorStore((state) => state.startStroke);
-  const appendStrokePoint = useEditorStore((state) => state.appendStrokePoint);
-  const finishStroke = useEditorStore((state) => state.finishStroke);
-  const setSplitRatio = useEditorStore((state) => state.setSplitRatio);
-  const setPan = useEditorStore((state) => state.setPan);
-  const setZoom = useEditorStore((state) => state.setZoom);
+  const hasSecondImage = useEditorStore((state) => Boolean(state.image2));
 
   const [isPanning, setIsPanning] = useState(false);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [isOverSplitHandle, setIsOverSplitHandle] = useState(false);
-  const [cursorPos, setCursorPos] = useState<{x: number; y: number} | null>(null);
+  const [cursorPos, setCursorPos] = useState<Point | null>(null);
+
   const lastPanPos = useRef({x: 0, y: 0});
   const activePointerId = useRef<number | null>(null);
   const wheelZoomResidual = useRef(0);
+
+  const cursorPosRef = useRef<Point | null>(null);
+  const pendingCursorPosRef = useRef<Point | null>(null);
+  const cursorFrameRef = useRef<number>(0);
+
+  const pendingStrokePointsRef = useRef<Point[]>([]);
+  const strokeFrameRef = useRef<number>(0);
+  const lastAcceptedPointRef = useRef<Point | null>(null);
+  const lastAcceptedVectorRef = useRef<Point | null>(null);
 
   const getImageCoordsFromClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -89,6 +129,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
   const isPointerNearSplitHandle = useCallback(
     (clientX: number, clientY: number) => {
+      const {image2, splitDirection, splitRatio} = useEditorStore.getState();
       const canvas = canvasRef.current;
       if (!canvas || !image2 || canvas.width <= 0 || canvas.height <= 0) return false;
 
@@ -107,7 +148,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       return Math.hypot(dx, dy) <= SPLIT_HANDLE_HIT_RADIUS_PX;
     },
-    [canvasRef, image2, splitDirection, splitRatio],
+    [canvasRef],
   );
 
   const updateSplitRatioFromClient = useCallback(
@@ -115,6 +156,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       const canvas = canvasRef.current;
       if (!canvas) return;
 
+      const {setSplitRatio, splitDirection} = useEditorStore.getState();
       const coords = getImageCoordsFromClient(clientX, clientY);
       const nextRatio = getSplitRatioFromPoint(
         coords.x,
@@ -126,7 +168,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       setSplitRatio(Math.round(nextRatio * 100), {debouncedHistory: true});
     },
-    [canvasRef, getImageCoordsFromClient, setSplitRatio, splitDirection],
+    [canvasRef, getImageCoordsFromClient],
   );
 
   const releasePointerCapture = useCallback((element: HTMLDivElement, pointerId: number) => {
@@ -146,6 +188,132 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
     if (typeof element.hasPointerCapture !== 'function') return false;
     return element.hasPointerCapture(pointerId);
   }, []);
+
+  const scheduleCursorUpdate = useCallback((nextCursorPos: Point | null) => {
+    pendingCursorPosRef.current = nextCursorPos;
+    if (cursorFrameRef.current) return;
+
+    cursorFrameRef.current = requestAnimationFrame(() => {
+      cursorFrameRef.current = 0;
+      const next = pendingCursorPosRef.current;
+      if (areCursorPositionsEqual(cursorPosRef.current, next)) return;
+
+      cursorPosRef.current = next;
+      setCursorPos(next);
+    });
+  }, []);
+
+  const resetStrokeQueue = useCallback(() => {
+    if (strokeFrameRef.current) {
+      cancelAnimationFrame(strokeFrameRef.current);
+      strokeFrameRef.current = 0;
+    }
+
+    pendingStrokePointsRef.current = [];
+  }, []);
+
+  const flushPendingStrokePoints = useCallback(() => {
+    if (pendingStrokePointsRef.current.length === 0) return;
+
+    const pendingPoints = pendingStrokePointsRef.current;
+    pendingStrokePointsRef.current = [];
+    useEditorStore.getState().appendStrokePoints(pendingPoints);
+  }, []);
+
+  const scheduleStrokeFlush = useCallback(() => {
+    if (strokeFrameRef.current) return;
+
+    strokeFrameRef.current = requestAnimationFrame(() => {
+      strokeFrameRef.current = 0;
+      flushPendingStrokePoints();
+    });
+  }, [flushPendingStrokePoints]);
+
+  const queueStrokePoint = useCallback(
+    (x: number, y: number, options?: {force: boolean}) => {
+      const force = options?.force ?? false;
+      const nextPoint = {x, y};
+      const previous = lastAcceptedPointRef.current;
+      const perfStats = getSamplingPerfStats();
+
+      if (!previous) {
+        lastAcceptedPointRef.current = nextPoint;
+        pendingStrokePointsRef.current.push(nextPoint);
+        scheduleStrokeFlush();
+        if (perfStats) {
+          perfStats.acceptedPoints += 1;
+        }
+        return;
+      }
+
+      const dx = nextPoint.x - previous.x;
+      const dy = nextPoint.y - previous.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist === 0) {
+        if (perfStats) {
+          perfStats.skippedPoints += 1;
+        }
+        return;
+      }
+
+      const {brushRadius, zoom} = useEditorStore.getState();
+      const minDistance = getAdaptiveSamplingDistance(brushRadius, zoom);
+
+      let shouldAppend = force || dist >= minDistance;
+
+      if (!shouldAppend && dist > 0) {
+        const previousVector = lastAcceptedVectorRef.current;
+        if (previousVector && dist >= minDistance * 0.5) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const prevLen = Math.hypot(previousVector.x, previousVector.y);
+          if (prevLen > 0) {
+            const pvx = previousVector.x / prevLen;
+            const pvy = previousVector.y / prevLen;
+            const dot = nx * pvx + ny * pvy;
+            shouldAppend = dot < DIRECTION_CHANGE_DOT_THRESHOLD;
+          }
+        }
+      }
+
+      if (!shouldAppend) {
+        if (perfStats) {
+          perfStats.skippedPoints += 1;
+        }
+        return;
+      }
+
+      pendingStrokePointsRef.current.push(nextPoint);
+      lastAcceptedPointRef.current = nextPoint;
+      lastAcceptedVectorRef.current = {x: dx, y: dy};
+      scheduleStrokeFlush();
+
+      if (perfStats) {
+        perfStats.acceptedPoints += 1;
+      }
+    },
+    [scheduleStrokeFlush],
+  );
+
+  const finishActiveStroke = useCallback(
+    (finalPoint?: Point) => {
+      const store = useEditorStore.getState();
+      if (!store.isDrawing) return;
+
+      if (finalPoint) {
+        queueStrokePoint(finalPoint.x, finalPoint.y, {force: true});
+      }
+
+      flushPendingStrokePoints();
+      store.finishStroke();
+
+      resetStrokeQueue();
+      lastAcceptedPointRef.current = null;
+      lastAcceptedVectorRef.current = null;
+    },
+    [flushPendingStrokePoints, queueStrokePoint, resetStrokeQueue],
+  );
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -170,6 +338,8 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         return;
       }
 
+      const {activeTool, startStroke} = useEditorStore.getState();
+
       if (activeTool === 'select') {
         event.preventDefault();
         activePointerId.current = event.pointerId;
@@ -187,14 +357,16 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       const coords = getImageCoordsFromClient(event.clientX, event.clientY);
       startStroke(coords.x, coords.y);
+      resetStrokeQueue();
+      lastAcceptedPointRef.current = coords;
+      lastAcceptedVectorRef.current = null;
     },
     [
-      activeTool,
       getImageCoordsFromClient,
       isPointerNearSplitHandle,
       isWithinCanvasBounds,
+      resetStrokeQueue,
       setPointerCapture,
-      startStroke,
       updateSplitRatioFromClient,
     ],
   );
@@ -205,10 +377,11 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       const isOverCanvas = isWithinCanvasBounds(event.clientX, event.clientY);
       const coords = getImageCoordsFromClient(event.clientX, event.clientY);
-      setCursorPos(isOverCanvas ? coords : null);
+      scheduleCursorUpdate(isOverCanvas ? coords : null);
 
       if (!isDraggingSplit) {
-        setIsOverSplitHandle(isPointerNearSplitHandle(event.clientX, event.clientY));
+        const isNearSplitHandle = isPointerNearSplitHandle(event.clientX, event.clientY);
+        setIsOverSplitHandle((prev) => (prev === isNearSplitHandle ? prev : isNearSplitHandle));
       }
 
       if (isDraggingSplit) {
@@ -220,30 +393,30 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         const dx = event.clientX - lastPanPos.current.x;
         const dy = event.clientY - lastPanPos.current.y;
         lastPanPos.current = {x: event.clientX, y: event.clientY};
+
+        const {panX, panY, setPan} = useEditorStore.getState();
         setPan(panX + dx, panY + dy);
         return;
       }
 
-      if (isDrawing) {
+      if (useEditorStore.getState().isDrawing) {
         if (!isOverCanvas) {
-          finishStroke();
+          finishActiveStroke();
           return;
         }
-        appendStrokePoint(coords.x, coords.y);
+
+        queueStrokePoint(coords.x, coords.y, {force: false});
       }
     },
     [
-      appendStrokePoint,
-      finishStroke,
+      finishActiveStroke,
       getImageCoordsFromClient,
       isDraggingSplit,
-      isPointerNearSplitHandle,
-      isDrawing,
       isPanning,
+      isPointerNearSplitHandle,
       isWithinCanvasBounds,
-      panX,
-      panY,
-      setPan,
+      queueStrokePoint,
+      scheduleCursorUpdate,
       updateSplitRatioFromClient,
     ],
   );
@@ -261,19 +434,25 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         setIsPanning(false);
       }
 
+      const isDrawing = useEditorStore.getState().isDrawing;
       if (isDrawing) {
-        finishStroke();
+        const isOverCanvas = isWithinCanvasBounds(event.clientX, event.clientY);
+        const finalPoint = isOverCanvas
+          ? getImageCoordsFromClient(event.clientX, event.clientY)
+          : undefined;
+        finishActiveStroke(finalPoint);
       }
 
       activePointerId.current = null;
       releasePointerCapture(event.currentTarget, event.pointerId);
     },
     [
-      finishStroke,
+      finishActiveStroke,
+      getImageCoordsFromClient,
       isDraggingSplit,
-      isDrawing,
       isPanning,
       isPointerNearSplitHandle,
+      isWithinCanvasBounds,
       releasePointerCapture,
     ],
   );
@@ -283,11 +462,11 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
       if (hasPointerCapture(event.currentTarget, event.pointerId)) return;
 
-      setCursorPos(null);
+      scheduleCursorUpdate(null);
       setIsOverSplitHandle(false);
 
-      if (isDrawing) {
-        finishStroke();
+      if (useEditorStore.getState().isDrawing) {
+        finishActiveStroke();
       }
 
       if (isPanning) {
@@ -303,18 +482,25 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         activePointerId.current = null;
       }
     },
-    [finishStroke, hasPointerCapture, isDraggingSplit, isDrawing, isPanning, releasePointerCapture],
+    [
+      finishActiveStroke,
+      hasPointerCapture,
+      isDraggingSplit,
+      isPanning,
+      releasePointerCapture,
+      scheduleCursorUpdate,
+    ],
   );
 
   const handlePointerCancel = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
 
-      setCursorPos(null);
+      scheduleCursorUpdate(null);
       setIsOverSplitHandle(false);
 
-      if (isDrawing) {
-        finishStroke();
+      if (useEditorStore.getState().isDrawing) {
+        finishActiveStroke();
       }
 
       if (isPanning) {
@@ -330,11 +516,11 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         activePointerId.current = null;
       }
     },
-    [finishStroke, isDraggingSplit, isDrawing, isPanning, releasePointerCapture],
+    [finishActiveStroke, isDraggingSplit, isPanning, releasePointerCapture, scheduleCursorUpdate],
   );
 
   useEffect(() => {
-    if (image2) return;
+    if (hasSecondImage) return;
 
     if (isDraggingSplit) {
       setIsDraggingSplit(false);
@@ -342,7 +528,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
     if (isOverSplitHandle) {
       setIsOverSplitHandle(false);
     }
-  }, [image2, isDraggingSplit, isOverSplitHandle]);
+  }, [hasSecondImage, isDraggingSplit, isOverSplitHandle]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -368,7 +554,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       const rect = container.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) {
-        setZoom(nextZoom);
+        useEditorStore.getState().setZoom(nextZoom);
         return;
       }
 
@@ -381,13 +567,25 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       const nextPanX = scaleRatio * currentPanX + (1 - scaleRatio) * pointerOffsetX;
       const nextPanY = scaleRatio * currentPanY + (1 - scaleRatio) * pointerOffsetY;
 
+      const {setPan, setZoom} = useEditorStore.getState();
       setPan(nextPanX, nextPanY);
       setZoom(nextZoom);
     };
 
     container.addEventListener('wheel', handleWheel, {passive: false});
     return () => container.removeEventListener('wheel', handleWheel);
-  }, [containerRef, setPan, setZoom]);
+  }, [containerRef]);
+
+  useEffect(() => {
+    return () => {
+      if (cursorFrameRef.current) {
+        cancelAnimationFrame(cursorFrameRef.current);
+      }
+      if (strokeFrameRef.current) {
+        cancelAnimationFrame(strokeFrameRef.current);
+      }
+    };
+  }, []);
 
   return {
     isPanning,
