@@ -1,12 +1,42 @@
 import {useEffect} from 'react';
 import {X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
-import {EDITOR_SHORTCUTS, formatShortcutKeys} from '@/features/editor/lib/shortcut-definitions';
+import {
+  EDITOR_SHORTCUTS,
+  formatShortcutKeys,
+  type ShortcutId,
+} from '@/features/editor/lib/shortcut-definitions';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
+
+const SHORTCUT_GROUPS: Array<{title: string; shortcutIds: ShortcutId[]}> = [
+  {
+    title: 'General',
+    shortcutIds: ['shortcuts-modal', 'undo', 'redo', 'open-upload-dialog', 'export', 'new-project'],
+  },
+  {
+    title: 'Editor',
+    shortcutIds: ['pan', 'zoom', 'zoom-step', 'switch-tool'],
+  },
+  {
+    title: 'Blur',
+    shortcutIds: [
+      'toggle-blur-type',
+      'toggle-outlines',
+      'radius-step',
+      'strength-step',
+      'load-template-slot',
+    ],
+  },
+  {
+    title: 'Split',
+    shortcutIds: ['cycle-split-direction', 'toggle-split-placement'],
+  },
+];
 
 export function ShortcutsModal() {
   const open = useEditorStore((state) => state.showShortcutsModal);
   const closeShortcutsModal = useEditorStore((state) => state.closeShortcutsModal);
+  const shortcutsById = new Map(EDITOR_SHORTCUTS.map((shortcut) => [shortcut.id, shortcut]));
 
   useEffect(() => {
     if (!open) return;
@@ -50,15 +80,30 @@ export function ShortcutsModal() {
           </button>
         </div>
 
-        <div className="space-y-1 px-5 py-4 text-xs">
-          {EDITOR_SHORTCUTS.map((shortcut) => (
-            <div key={shortcut.id} className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{shortcut.label}</span>
-              <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
-                {formatShortcutKeys(shortcut.keys)}
-              </kbd>
-            </div>
-          ))}
+        <div className="space-y-4 px-5 py-4 text-xs">
+          {SHORTCUT_GROUPS.map((group) => {
+            const shortcuts = group.shortcutIds
+              .map((shortcutId) => shortcutsById.get(shortcutId))
+              .filter((shortcut): shortcut is (typeof EDITOR_SHORTCUTS)[number] => !!shortcut);
+
+            if (shortcuts.length === 0) return null;
+
+            return (
+              <section key={group.title} className="space-y-1.5">
+                <h3 className="text-foreground text-[11px] font-semibold tracking-wide uppercase">
+                  {group.title}
+                </h3>
+                {shortcuts.map((shortcut) => (
+                  <div key={shortcut.id} className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">{shortcut.label}</span>
+                    <kbd className="bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 font-mono">
+                      {formatShortcutKeys(shortcut.keys)}
+                    </kbd>
+                  </div>
+                ))}
+              </section>
+            );
+          })}
         </div>
 
         <div className="border-border flex items-center justify-end border-t-2 px-5 py-4">

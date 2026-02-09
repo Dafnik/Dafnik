@@ -406,7 +406,7 @@ export const useEditorStore = create<EditorStoreState>()(
         );
 
         set({
-          blurStrokes,
+          blurStrokes: [...state.blurStrokes, ...blurStrokes],
           isDrawing: false,
           currentStroke: null,
           selectedTemplateId: templateId,

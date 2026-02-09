@@ -117,7 +117,7 @@ describe('store template actions', () => {
     expect(store.getState().blurTemplates.map((template) => template.id)).toEqual(before);
   });
 
-  it('loads template by replacing strokes and pushing history', () => {
+  it('loads template without replacing existing strokes and pushes history', () => {
     const store = useEditorStore;
     store.getState().initializeEditor({image1: 'img', image2: null, width: 100, height: 100});
 
@@ -161,8 +161,9 @@ describe('store template actions', () => {
     const loaded = store.getState().loadBlurTemplate(templateId);
 
     expect(loaded.ok).toBe(true);
-    expect(store.getState().blurStrokes).toHaveLength(1);
-    expect(store.getState().blurStrokes[0].points[0].x).toBeCloseTo(8);
+    expect(store.getState().blurStrokes).toHaveLength(2);
+    expect(store.getState().blurStrokes[0].points[0].x).toBeCloseTo(60);
+    expect(store.getState().blurStrokes[1].points[0].x).toBeCloseTo(8);
     expect(store.getState().isDrawing).toBe(false);
     expect(store.getState().currentStroke).toBeNull();
     expect(store.getState().history.length).toBe(historyBefore + 1);

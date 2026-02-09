@@ -111,10 +111,8 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
   const outlinesTooltip = formatShortcutTooltip('Toggle outlines', ['toggle-outlines']);
   const radiusTooltip = formatShortcutTooltip('Radius +/-', ['radius-step']);
   const strengthTooltip = formatShortcutTooltip('Strength +/-', ['strength-step']);
-  const directionTooltip = formatShortcutTooltip('Cycle split direction', [
-    'cycle-split-direction',
-  ]);
-  const placementTooltip = formatShortcutTooltip('Split placement', ['toggle-split-placement']);
+  const directionTooltip = formatShortcutTooltip('Cycle direction', ['cycle-split-direction']);
+  const placementTooltip = formatShortcutTooltip('Cycle placement', ['toggle-split-placement']);
   const shortcutsTooltip = formatShortcutTooltip('Shortcuts', ['shortcuts-modal']);
   const uploadDialogTooltip = formatShortcutTooltip('Open file dialog', ['open-upload-dialog']);
 
