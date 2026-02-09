@@ -74,6 +74,22 @@ describe('EditorSidebar shortcut tooltips', () => {
     expect(await screen.findByRole('tooltip', {name: 'Reset all blurs'})).toBeInTheDocument();
   });
 
+  it('shows auto-blur emails tooltip', async () => {
+    useEditorStore.setState({
+      activeTool: 'blur',
+      image1: 'data:image/png;base64,xyz',
+      imageWidth: 200,
+      imageHeight: 100,
+    });
+    const user = userEvent.setup();
+    renderEditorLayout();
+
+    const autoBlurButton = screen.getByRole('button', {name: /auto blur detected emails/i});
+    await user.hover(autoBlurButton);
+
+    expect(await screen.findByRole('tooltip', {name: 'Auto blur emails'})).toBeInTheDocument();
+  });
+
   it('shows radius tooltip on label', async () => {
     useEditorStore.setState({activeTool: 'blur'});
     const user = userEvent.setup();

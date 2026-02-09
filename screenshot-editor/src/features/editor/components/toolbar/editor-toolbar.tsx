@@ -7,7 +7,6 @@ import {
   Minus,
   Plus,
   Redo2,
-  RotateCcw,
   Settings2,
   SquareLibrary,
   Undo2,
@@ -61,11 +60,6 @@ export function EditorToolbar() {
     },
     [setZoom, zoom, zoomInput],
   );
-
-  const handleResetView = useCallback(() => {
-    setZoom(100);
-    setPan(0, 0);
-  }, [setPan, setZoom]);
 
   const handleCenterCanvas = useCallback(() => {
     setPan(0, 0);
@@ -170,15 +164,6 @@ export function EditorToolbar() {
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </ShortcutTooltip>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={handleResetView}
-          aria-label="Reset view">
-          <RotateCcw className="h-3.5 w-3.5" />
-        </Button>
       </div>
 
       <div className="flex items-center gap-1">

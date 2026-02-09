@@ -14,6 +14,7 @@ export function createStrokeActions({
   | 'setZoom'
   | 'setPan'
   | 'updateBlurStrokesAtIndices'
+  | 'appendBlurStrokes'
   | 'startStroke'
   | 'setCurrentStrokeEndpoint'
   | 'appendStrokePoints'
@@ -84,6 +85,22 @@ export function createStrokeActions({
       });
 
       if (options?.commitHistory ?? false) {
+        get().pushHistorySnapshot();
+      }
+      return true;
+    },
+
+    appendBlurStrokes: (strokes, options) => {
+      const validStrokes = strokes.filter((stroke) => stroke.points.length > 0);
+      if (validStrokes.length === 0) return false;
+
+      set((state) => ({
+        blurStrokes: [...state.blurStrokes, ...validStrokes],
+        isDrawing: false,
+        currentStroke: null,
+      }));
+
+      if (options?.commitHistory ?? true) {
         get().pushHistorySnapshot();
       }
       return true;

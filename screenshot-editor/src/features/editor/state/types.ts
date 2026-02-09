@@ -140,6 +140,10 @@ export interface UpdateBlurStrokesAtIndicesOptions {
   commitHistory: boolean;
 }
 
+export interface AppendBlurStrokesOptions {
+  commitHistory: boolean;
+}
+
 export interface BlurStrokePatch {
   radius?: number;
   strength?: number;
@@ -179,6 +183,10 @@ export interface EditorStoreActions {
     indices: number[],
     patch: BlurStrokePatch,
     options?: Partial<UpdateBlurStrokesAtIndicesOptions>,
+  ) => boolean;
+  appendBlurStrokes: (
+    strokes: BlurStroke[],
+    options?: Partial<AppendBlurStrokesOptions>,
   ) => boolean;
   startStroke: (x: number, y: number, options?: {shape?: BlurStrokeShape}) => void;
   setCurrentStrokeEndpoint: (x: number, y: number) => void;

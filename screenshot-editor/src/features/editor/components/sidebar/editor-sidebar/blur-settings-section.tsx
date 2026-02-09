@@ -1,4 +1,4 @@
-import {Droplets, Eye, Grid3X3, RotateCcw} from 'lucide-react';
+import {AtSign, Droplets, Eye, Grid3X3, Loader2, Trash2} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Label} from '@/components/ui/label';
 import {Slider} from '@/components/ui/slider';
@@ -25,6 +25,11 @@ interface BlurSettingsSectionProps {
   onStrengthChange: (nextStrength: number) => void;
   onStrengthCommit: (nextStrength: number) => void;
   onRadiusChange: (value: number) => void;
+  onAutoBlurEmails: () => void;
+  isAutoBlurEmailsPending: boolean;
+  autoBlurEmailsDisabled: boolean;
+  autoBlurEmailsTooltip: string;
+  autoBlurEmailsStatus?: string;
 }
 
 export function BlurSettingsSection({
@@ -47,6 +52,11 @@ export function BlurSettingsSection({
   onStrengthChange,
   onStrengthCommit,
   onRadiusChange,
+  onAutoBlurEmails,
+  isAutoBlurEmailsPending,
+  autoBlurEmailsDisabled,
+  autoBlurEmailsTooltip,
+  autoBlurEmailsStatus,
 }: BlurSettingsSectionProps) {
   return (
     <div className="border-border border-b-2 p-4">
@@ -69,19 +79,28 @@ export function BlurSettingsSection({
               <Eye className="h-3.5 w-3.5" />
             </Button>
           </ShortcutTooltip>
-          <ShortcutTooltip content="Reset all blurs">
+          <ShortcutTooltip content={autoBlurEmailsTooltip}>
             <Button
               type="button"
               variant="secondary"
               size="icon"
-              aria-label="Reset all blurs"
-              onClick={onClearBlurStrokes}
+              aria-label="Auto blur detected emails"
+              onClick={onAutoBlurEmails}
+              disabled={autoBlurEmailsDisabled}
               className="h-7 w-7">
-              <RotateCcw className="h-3.5 w-3.5" />
+              {isAutoBlurEmailsPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <AtSign className="h-3.5 w-3.5" />
+              )}
             </Button>
           </ShortcutTooltip>
         </div>
       </div>
+
+      {autoBlurEmailsStatus ? (
+        <p className="text-muted-foreground mb-3 text-[11px]">{autoBlurEmailsStatus}</p>
+      ) : null}
 
       <div className="space-y-4">
         <div>
@@ -182,6 +201,18 @@ export function BlurSettingsSection({
             </div>
           </ShortcutTooltip>
         </div>
+
+        <ShortcutTooltip content="Reset all blurs">
+          <Button
+            type="button"
+            variant="secondary"
+            aria-label="Reset all blurs"
+            onClick={onClearBlurStrokes}
+            className="h-8 w-full gap-1.5 text-xs">
+            <Trash2 className="h-3.5 w-3.5" />
+            Reset all blurs
+          </Button>
+        </ShortcutTooltip>
       </div>
     </div>
   );

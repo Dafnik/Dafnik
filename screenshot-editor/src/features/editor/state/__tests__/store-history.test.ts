@@ -181,4 +181,65 @@ describe('editor store history semantics', () => {
     expect(store.getState().blurStrokes[0].blurType).toBe('pixelated');
     expect(store.getState().blurStrokes[0].strength).toBe(7);
   });
+
+  it('appends blur strokes and commits history by default', () => {
+    const store = useEditorStore;
+    store.getState().initializeEditor({image1: 'img-1', image2: null, width: 120, height: 80});
+    store.setState({
+      blurStrokes: [
+        {
+          points: [{x: 8, y: 8}],
+          radius: 5,
+          strength: 6,
+          blurType: 'normal',
+        },
+      ],
+      isDrawing: true,
+      currentStroke: {
+        points: [{x: 1, y: 1}],
+        radius: 2,
+        strength: 2,
+        blurType: 'normal',
+      },
+    });
+
+    const historyBefore = store.getState().history.length;
+    const changed = store.getState().appendBlurStrokes([
+      {
+        points: [
+          {x: 20, y: 20},
+          {x: 40, y: 40},
+        ],
+        radius: 8,
+        strength: 9,
+        blurType: 'pixelated',
+        shape: 'box',
+      },
+    ]);
+
+    const state = store.getState();
+    expect(changed).toBe(true);
+    expect(state.blurStrokes).toHaveLength(2);
+    expect(state.isDrawing).toBe(false);
+    expect(state.currentStroke).toBeNull();
+    expect(state.history.length).toBe(historyBefore + 1);
+  });
+
+  it('returns false and avoids history when append payload is empty/invalid', () => {
+    const store = useEditorStore;
+    store.getState().initializeEditor({image1: 'img-1', image2: null, width: 120, height: 80});
+
+    const historyBefore = store.getState().history.length;
+    const changed = store.getState().appendBlurStrokes([
+      {
+        points: [],
+        radius: 8,
+        strength: 9,
+        blurType: 'pixelated',
+      },
+    ]);
+
+    expect(changed).toBe(false);
+    expect(store.getState().history.length).toBe(historyBefore);
+  });
 });

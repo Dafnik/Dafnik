@@ -1,7 +1,9 @@
-import {useCallback, useEffect, useMemo, useRef} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
+import {createEmailBlurStrokes} from '@/features/editor/lib/email-blur-strokes';
 import {isOpenUploadShortcut, isTypingElement} from '@/features/editor/lib/keyboard';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
+import {detectEmailsInImage} from '@/features/editor/services/email-detection';
 import type {BlurType} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {BlurSettingsSection} from './editor-sidebar/blur-settings-section';
@@ -17,8 +19,13 @@ interface EditorSidebarProps {
 export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingSelectedStrengthHistoryRef = useRef(false);
+  const [isAutoBlurEmailsPending, setIsAutoBlurEmailsPending] = useState(false);
+  const [autoBlurEmailsStatus, setAutoBlurEmailsStatus] = useState<string | undefined>(undefined);
 
+  const image1 = useEditorStore((state) => state.image1);
   const image2 = useEditorStore((state) => state.image2);
+  const imageWidth = useEditorStore((state) => state.imageWidth);
+  const imageHeight = useEditorStore((state) => state.imageHeight);
   const activeTool = useEditorStore((state) => state.activeTool);
   const blurType = useEditorStore((state) => state.blurType);
   const brushRadius = useEditorStore((state) => state.brushRadius);
@@ -35,6 +42,7 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
   const setBrushRadius = useEditorStore((state) => state.setBrushRadius);
   const setBrushStrength = useEditorStore((state) => state.setBrushStrength);
   const updateBlurStrokesAtIndices = useEditorStore((state) => state.updateBlurStrokesAtIndices);
+  const appendBlurStrokes = useEditorStore((state) => state.appendBlurStrokes);
   const pushHistorySnapshot = useEditorStore((state) => state.pushHistorySnapshot);
   const setSplitRatio = useEditorStore((state) => state.setSplitRatio);
   const setSplitDirection = useEditorStore((state) => state.setSplitDirection);
@@ -68,6 +76,7 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
   const placementTooltip = formatShortcutTooltip('Cycle placement', ['toggle-split-placement']);
   const shortcutsTooltip = formatShortcutTooltip('Shortcuts', ['shortcuts-modal']);
   const uploadDialogTooltip = formatShortcutTooltip('Open file dialog', ['open-upload-dialog']);
+  const autoBlurEmailsTooltip = 'Auto blur emails';
 
   const validSelectedStrokeIndices = useMemo(() => {
     const unique = [...new Set(selectedStrokeIndices)];
@@ -88,6 +97,9 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
     : null;
   const displayedBlurType = selectedSourceStroke?.blurType ?? blurType;
   const displayedStrength = selectedSourceStroke?.strength ?? brushStrength;
+  const canAutoBlurEmails = Boolean(image1) && imageWidth > 0 && imageHeight > 0;
+  const autoBlurEmailsDisabled =
+    !canAutoBlurEmails || activeTool !== 'blur' || isAutoBlurEmailsPending;
 
   const handleBlurTypeChange = useCallback(
     (nextType: BlurType) => {
@@ -164,6 +176,68 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
     ],
   );
 
+  const handleAutoBlurEmails = useCallback(() => {
+    if (!image1 || imageWidth <= 0 || imageHeight <= 0 || isAutoBlurEmailsPending) return;
+
+    setIsAutoBlurEmailsPending(true);
+    setAutoBlurEmailsStatus(undefined);
+
+    void (async () => {
+      try {
+        const matches = await detectEmailsInImage({
+          image1,
+          image2,
+          imageWidth,
+          imageHeight,
+          splitDirection,
+          splitRatio,
+        });
+
+        if (matches.length === 0) {
+          setAutoBlurEmailsStatus('No email addresses detected.');
+          return;
+        }
+
+        const nextStrokes = createEmailBlurStrokes({
+          boxes: matches.map((match) => match.box),
+          imageWidth,
+          imageHeight,
+          blurType,
+          strength: brushStrength,
+          radius: brushRadius,
+        });
+
+        if (!appendBlurStrokes(nextStrokes, {commitHistory: true})) {
+          setAutoBlurEmailsStatus('No email addresses detected.');
+          return;
+        }
+
+        setShowBlurOutlines(true);
+        setAutoBlurEmailsStatus(
+          `Blurred ${matches.length} detected email${matches.length === 1 ? '' : 's'}.`,
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message ? error.message : 'Unknown OCR error.';
+        setAutoBlurEmailsStatus(`Automatic email detection failed: ${message}`);
+      } finally {
+        setIsAutoBlurEmailsPending(false);
+      }
+    })();
+  }, [
+    appendBlurStrokes,
+    blurType,
+    brushRadius,
+    brushStrength,
+    image1,
+    image2,
+    imageHeight,
+    imageWidth,
+    isAutoBlurEmailsPending,
+    splitDirection,
+    splitRatio,
+  ]);
+
   useEffect(() => {
     if (image2) return;
 
@@ -185,9 +259,13 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
     }
   }, [isSelectToolWithSelection]);
 
+  useEffect(() => {
+    setAutoBlurEmailsStatus(undefined);
+  }, [image1, image2, imageHeight, imageWidth, splitDirection, splitRatio]);
+
   return (
     <aside
-      className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-r-2"
+      className="border-border flex h-full w-72 flex-shrink-0 flex-col overflow-y-auto border-r-2"
       style={{background: 'oklch(var(--sidebar-background))'}}>
       <ToolSection
         activeTool={activeTool}
@@ -215,6 +293,11 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
         onStrengthChange={handleStrengthChange}
         onStrengthCommit={handleStrengthCommit}
         onRadiusChange={setBrushRadius}
+        onAutoBlurEmails={handleAutoBlurEmails}
+        isAutoBlurEmailsPending={isAutoBlurEmailsPending}
+        autoBlurEmailsDisabled={autoBlurEmailsDisabled}
+        autoBlurEmailsTooltip={autoBlurEmailsTooltip}
+        autoBlurEmailsStatus={autoBlurEmailsStatus}
       />
 
       <SplitViewSection
