@@ -15,7 +15,7 @@ const SHORTCUT_GROUPS: Array<{title: string; shortcutIds: ShortcutId[]}> = [
   },
   {
     title: 'Editor',
-    shortcutIds: ['pan', 'zoom', 'zoom-step', 'switch-tool'],
+    shortcutIds: ['pan', 'zoom', 'zoom-step', 'switch-tool', 'copy-selection', 'paste-selection'],
   },
   {
     title: 'Blur',

@@ -1,4 +1,10 @@
-import {useEffect} from 'react';
+import {useEffect, useRef} from 'react';
+import {
+  clampRectTranslation,
+  computeBlurStrokeOutlineRects,
+  computeRectUnion,
+  translateStroke,
+} from '@/features/editor/lib/blur-box-geometry';
 import {
   getTemplateSlotIndex,
   isArrowLeft,
@@ -8,7 +14,7 @@ import {
   isTypingElement,
   normalizeKey,
 } from '@/features/editor/lib/keyboard';
-import type {EditorStoreState, SplitDirection} from '@/features/editor/state/types';
+import type {BlurStroke, EditorStoreState, SplitDirection} from '@/features/editor/state/types';
 import {confirmResetProject} from '@/features/editor/lib/confirm-reset-project';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
@@ -21,6 +27,7 @@ const BRUSH_STRENGTH_MIN = 1;
 const BRUSH_STRENGTH_MAX = 30;
 const ZOOM_MIN = 10;
 const ZOOM_MAX = 500;
+const PASTE_OFFSET_PX = 45;
 const BLUR_TOOL_ORDER = ['drag', 'select', 'blur'] as const;
 const BLUR_TYPE_ORDER = ['normal', 'pixelated'] as const;
 const SPLIT_DIRECTION_ORDER: SplitDirection[] = [
@@ -50,7 +57,40 @@ function isBackspaceKey(event: KeyboardEvent): boolean {
   return event.key === 'Backspace' || event.code === 'Backspace';
 }
 
+function cloneStroke(stroke: BlurStroke): BlurStroke {
+  return {
+    ...stroke,
+    points: stroke.points.map((point) => ({x: point.x, y: point.y})),
+  };
+}
+
+function getPasteTranslation(
+  strokes: BlurStroke[],
+  desiredOffset: number,
+  boundsWidth: number,
+  boundsHeight: number,
+): {x: number; y: number} {
+  if (boundsWidth <= 0 || boundsHeight <= 0) {
+    return {x: desiredOffset, y: desiredOffset};
+  }
+
+  const rects = computeBlurStrokeOutlineRects(strokes, boundsWidth, boundsHeight);
+  const unionRect = computeRectUnion(rects);
+  if (!unionRect) {
+    return {x: desiredOffset, y: desiredOffset};
+  }
+
+  return clampRectTranslation(unionRect, desiredOffset, desiredOffset, boundsWidth, boundsHeight);
+}
+
+interface ShortcutClipboard {
+  strokes: BlurStroke[];
+  pasteCount: number;
+}
+
 export function useEditorShortcuts() {
+  const clipboardRef = useRef<ShortcutClipboard | null>(null);
+
   useEffect(() => {
     const preventBrowserZoom = (event: WheelEvent) => {
       if (event.ctrlKey || event.metaKey) {
@@ -105,6 +145,53 @@ export function useEditorShortcuts() {
       }
 
       if (!hasModifier || isTyping) return;
+
+      if (isLetterKey(event, 'c')) {
+        const selectedIndices = getValidSelectedStrokeIndices(store);
+        if (selectedIndices.length === 0) return;
+
+        const selectedStrokes = selectedIndices
+          .map((index) => store.blurStrokes[index])
+          .filter((stroke): stroke is BlurStroke => Boolean(stroke))
+          .map(cloneStroke);
+        if (selectedStrokes.length === 0) return;
+
+        event.preventDefault();
+        clipboardRef.current = {
+          strokes: selectedStrokes,
+          pasteCount: 0,
+        };
+        return;
+      }
+
+      if (isLetterKey(event, 'v')) {
+        const clipboard = clipboardRef.current;
+        if (!clipboard || clipboard.strokes.length === 0) return;
+
+        const desiredOffset = PASTE_OFFSET_PX * (clipboard.pasteCount + 1);
+        const translation = getPasteTranslation(
+          clipboard.strokes,
+          desiredOffset,
+          store.imageWidth,
+          store.imageHeight,
+        );
+        const pastedStrokes = clipboard.strokes.map((stroke) =>
+          translateStroke(stroke, translation.x, translation.y),
+        );
+        if (pastedStrokes.length === 0) return;
+
+        const firstPastedIndex = store.blurStrokes.length;
+        event.preventDefault();
+        const appended = store.appendBlurStrokes(pastedStrokes, {commitHistory: true});
+        if (!appended) return;
+
+        store.setSelectedStrokeIndices(pastedStrokes.map((_, index) => firstPastedIndex + index));
+        clipboardRef.current = {
+          ...clipboard,
+          pasteCount: clipboard.pasteCount + 1,
+        };
+        return;
+      }
 
       const templateSlotIndex = getTemplateSlotIndex(event);
       if (templateSlotIndex !== null) {

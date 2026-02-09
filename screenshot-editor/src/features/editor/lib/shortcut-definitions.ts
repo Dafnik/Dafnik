@@ -2,6 +2,8 @@ export type ShortcutId =
   | 'shortcuts-modal'
   | 'undo'
   | 'redo'
+  | 'copy-selection'
+  | 'paste-selection'
   | 'open-upload-dialog'
   | 'pan'
   | 'zoom'
@@ -27,6 +29,8 @@ export const EDITOR_SHORTCUTS: ShortcutDefinition[] = [
   {id: 'shortcuts-modal', label: 'Shortcuts', keys: 'MOD+/'},
   {id: 'undo', label: 'Undo', keys: 'MOD+Z'},
   {id: 'redo', label: 'Redo', keys: 'MOD+Y / MOD+Shift+Z'},
+  {id: 'copy-selection', label: 'Copy selected blur boxes', keys: 'MOD+C'},
+  {id: 'paste-selection', label: 'Paste copied blur boxes', keys: 'MOD+V'},
   {id: 'open-upload-dialog', label: 'Open file dialog', keys: 'MOD+U'},
   {id: 'pan', label: 'Pan', keys: 'Alt+Drag'},
   {id: 'zoom', label: 'Zoom', keys: 'Scroll'},

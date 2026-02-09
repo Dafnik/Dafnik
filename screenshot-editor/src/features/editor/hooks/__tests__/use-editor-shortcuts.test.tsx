@@ -1,7 +1,7 @@
 import {fireEvent, render} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import {useEditorShortcuts} from '@/features/editor/hooks/use-editor-shortcuts';
-import type {BlurTemplate} from '@/features/editor/state/types';
+import type {BlurStroke, BlurTemplate} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 function ShortcutsHarness() {
@@ -29,6 +29,25 @@ function makeTemplate(
     ],
     createdAt: '2026-02-07T00:00:00.000Z',
     updatedAt: '2026-02-07T00:00:00.000Z',
+  };
+}
+
+function makeBlurBoxStroke(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  blurType: BlurStroke['blurType'] = 'normal',
+): BlurStroke {
+  return {
+    points: [
+      {x: startX, y: startY},
+      {x: endX, y: endY},
+    ],
+    radius: 10,
+    strength: 8,
+    blurType,
+    shape: 'box',
   };
 }
 
@@ -280,6 +299,137 @@ describe('useEditorShortcuts', () => {
     expect(state.blurStrokes[0].blurType).toBe('pixelated');
     expect(state.blurStrokes[1].blurType).toBe('pixelated');
     expect(state.blurType).toBe('normal');
+  });
+
+  it('copies and pastes all selected blur boxes, offsetting by 15px and selecting pasted boxes', () => {
+    useEditorStore.getState().initializeEditor({
+      image1: 'img-1',
+      image2: null,
+      width: 300,
+      height: 150,
+    });
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [
+        makeBlurBoxStroke(20, 20, 40, 40, 'normal'),
+        makeBlurBoxStroke(80, 50, 100, 70, 'pixelated'),
+      ],
+      selectedStrokeIndices: [0, 1],
+    });
+    render(<ShortcutsHarness />);
+    const historyBefore = useEditorStore.getState().history.length;
+
+    fireEvent.keyDown(window, {key: 'c', ctrlKey: true});
+    fireEvent.keyDown(window, {key: 'v', ctrlKey: true});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(4);
+    expect(state.blurStrokes[2]).toMatchObject(makeBlurBoxStroke(35, 35, 55, 55, 'normal'));
+    expect(state.blurStrokes[3]).toMatchObject(makeBlurBoxStroke(95, 65, 115, 85, 'pixelated'));
+    expect(state.selectedStrokeIndices).toEqual([2, 3]);
+    expect(state.history.length).toBe(historyBefore + 1);
+  });
+
+  it('accumulates paste offsets across repeated Ctrl+V after a single copy', () => {
+    useEditorStore.getState().initializeEditor({
+      image1: 'img-1',
+      image2: null,
+      width: 300,
+      height: 150,
+    });
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [makeBlurBoxStroke(20, 20, 40, 40, 'normal')],
+      selectedStrokeIndices: [0],
+    });
+    render(<ShortcutsHarness />);
+
+    fireEvent.keyDown(window, {key: 'c', ctrlKey: true});
+    fireEvent.keyDown(window, {key: 'v', ctrlKey: true});
+    fireEvent.keyDown(window, {key: 'v', ctrlKey: true});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(3);
+    expect(state.blurStrokes[1]).toMatchObject(makeBlurBoxStroke(35, 35, 55, 55, 'normal'));
+    expect(state.blurStrokes[2]).toMatchObject(makeBlurBoxStroke(50, 50, 70, 70, 'normal'));
+    expect(state.selectedStrokeIndices).toEqual([2]);
+  });
+
+  it('clamps pasted blur boxes so they remain within image bounds', () => {
+    useEditorStore.getState().initializeEditor({
+      image1: 'img-1',
+      image2: null,
+      width: 100,
+      height: 100,
+    });
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [makeBlurBoxStroke(80, 80, 95, 95, 'normal')],
+      selectedStrokeIndices: [0],
+    });
+    render(<ShortcutsHarness />);
+
+    fireEvent.keyDown(window, {key: 'c', ctrlKey: true});
+    fireEvent.keyDown(window, {key: 'v', ctrlKey: true});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(2);
+    expect(state.blurStrokes[1]).toMatchObject(makeBlurBoxStroke(85, 85, 100, 100, 'normal'));
+    expect(state.selectedStrokeIndices).toEqual([1]);
+  });
+
+  it('treats Ctrl+V with an empty clipboard as a no-op', () => {
+    useEditorStore.getState().initializeEditor({
+      image1: 'img-1',
+      image2: null,
+      width: 300,
+      height: 150,
+    });
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [makeBlurBoxStroke(20, 20, 40, 40, 'normal')],
+      selectedStrokeIndices: [0],
+    });
+    render(<ShortcutsHarness />);
+    const historyBefore = useEditorStore.getState().history.length;
+
+    fireEvent.keyDown(window, {key: 'v', ctrlKey: true});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(1);
+    expect(state.selectedStrokeIndices).toEqual([0]);
+    expect(state.history.length).toBe(historyBefore);
+  });
+
+  it('ignores copy/paste shortcuts while typing in a text input', () => {
+    useEditorStore.getState().initializeEditor({
+      image1: 'img-1',
+      image2: null,
+      width: 300,
+      height: 150,
+    });
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [makeBlurBoxStroke(20, 20, 40, 40, 'normal')],
+      selectedStrokeIndices: [0],
+    });
+    render(<ShortcutsHarness />);
+
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    document.body.appendChild(textInput);
+    textInput.focus();
+
+    fireEvent.keyDown(window, {key: 'c', ctrlKey: true});
+    fireEvent.keyDown(window, {key: 'v', ctrlKey: true});
+    textInput.blur();
+    fireEvent.keyDown(window, {key: 'v', ctrlKey: true});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(1);
+    expect(state.selectedStrokeIndices).toEqual([0]);
+
+    textInput.remove();
   });
 
   it('confirms before starting a new project with Ctrl+N', () => {
