@@ -75,6 +75,7 @@ export function useSelectionInteractions({
   getResizeHandleHitSizeInCanvasSpace,
   isWithinCanvasBounds,
 }: SelectionHookOptions): SelectionHookResult {
+  const externalSelectedStrokeIndices = useEditorStore((state) => state.selectedStrokeIndices);
   const [selectCursor, setSelectCursor] = useState('default');
   const [selectedStrokeIndices, setSelectedStrokeIndicesState] = useState<number[]>([]);
   const [marqueeRect, setMarqueeRect] = useState<BlurBoxRect | null>(null);
@@ -443,6 +444,17 @@ export function useSelectionInteractions({
     }
     setSelectCursor('default');
   }, [clearSelectInteraction]);
+
+  useEffect(() => {
+    const uniqueIndices = [...new Set(externalSelectedStrokeIndices)].filter((index) =>
+      Number.isInteger(index),
+    );
+
+    if (!areIndexListsEqual(uniqueIndices, selectedStrokeIndicesRef.current)) {
+      selectedStrokeIndicesRef.current = uniqueIndices;
+      setSelectedStrokeIndicesState(uniqueIndices);
+    }
+  }, [externalSelectedStrokeIndices]);
 
   useEffect(() => {
     if (activeTool === 'select') return;

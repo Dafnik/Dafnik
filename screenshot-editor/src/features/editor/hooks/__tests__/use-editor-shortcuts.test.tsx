@@ -298,4 +298,76 @@ describe('useEditorShortcuts', () => {
     expect(confirmMock).toHaveBeenCalledTimes(2);
     confirmMock.mockRestore();
   });
+
+  it('deletes selected blur strokes with Backspace and commits history once', () => {
+    useEditorStore.getState().initializeEditor({
+      image1: 'img-1',
+      image2: null,
+      width: 300,
+      height: 150,
+    });
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [
+        {
+          points: [{x: 10, y: 10}],
+          radius: 8,
+          strength: 6,
+          blurType: 'normal',
+        },
+        {
+          points: [{x: 40, y: 40}],
+          radius: 9,
+          strength: 7,
+          blurType: 'normal',
+        },
+        {
+          points: [{x: 80, y: 80}],
+          radius: 10,
+          strength: 8,
+          blurType: 'pixelated',
+        },
+      ],
+      selectedStrokeIndices: [2, 0, 2],
+    });
+    render(<ShortcutsHarness />);
+    const historyBefore = useEditorStore.getState().history.length;
+
+    fireEvent.keyDown(window, {key: 'Backspace', code: 'Backspace'});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(1);
+    expect(state.blurStrokes[0].points[0]).toEqual({x: 40, y: 40});
+    expect(state.selectedStrokeIndices).toEqual([]);
+    expect(state.history.length).toBe(historyBefore + 1);
+  });
+
+  it('does not delete selected blur strokes with Backspace while typing in input', () => {
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [
+        {
+          points: [{x: 10, y: 10}],
+          radius: 8,
+          strength: 6,
+          blurType: 'normal',
+        },
+      ],
+      selectedStrokeIndices: [0],
+    });
+    render(<ShortcutsHarness />);
+
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    document.body.appendChild(textInput);
+    textInput.focus();
+
+    fireEvent.keyDown(window, {key: 'Backspace', code: 'Backspace'});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(1);
+    expect(state.selectedStrokeIndices).toEqual([0]);
+
+    textInput.remove();
+  });
 });

@@ -1,9 +1,15 @@
 import {fireEvent, render} from '@testing-library/react';
 import {describe, expect, it} from 'vitest';
 import {EditorCanvasRoot} from '@/features/editor/components/canvas/editor-canvas-root';
+import {useEditorShortcuts} from '@/features/editor/hooks/use-editor-shortcuts';
 import {computeBlurStrokeOutlineRect} from '@/features/editor/lib/blur-box-geometry';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {mockCanvasRect} from './editor-canvas-root.test-utils';
+
+function CanvasWithShortcuts() {
+  useEditorShortcuts();
+  return <EditorCanvasRoot />;
+}
 
 describe('EditorCanvasRoot selection behavior', () => {
   it('moves a single selected blur box and commits one history snapshot on pointer up', () => {
@@ -414,5 +420,65 @@ describe('EditorCanvasRoot selection behavior', () => {
     expect(state.blurStrokes[1].points[0].y).toBeCloseTo(85);
     expect(state.blurStrokes[0].radius).toBe(10);
     expect(state.blurStrokes[1].radius).toBe(10);
+  });
+
+  it('clears canvas selection after Backspace deletes one or multiple selected blur boxes', () => {
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({
+      activeTool: 'select',
+      blurStrokes: [
+        {
+          points: [{x: 30, y: 30}],
+          radius: 10,
+          strength: 10,
+          blurType: 'normal',
+        },
+        {
+          points: [{x: 90, y: 80}],
+          radius: 10,
+          strength: 10,
+          blurType: 'normal',
+        },
+        {
+          points: [{x: 140, y: 90}],
+          radius: 10,
+          strength: 10,
+          blurType: 'normal',
+        },
+      ],
+    });
+
+    const {container} = render(<CanvasWithShortcuts />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+
+    fireEvent.pointerDown(backgroundContainer, {
+      button: 0,
+      pointerId: 501,
+      clientX: 5,
+      clientY: 5,
+    });
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 501,
+      clientX: 120,
+      clientY: 100,
+    });
+    fireEvent.pointerUp(backgroundContainer, {
+      pointerId: 501,
+      clientX: 120,
+      clientY: 100,
+    });
+
+    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(2);
+
+    fireEvent.keyDown(window, {key: 'Backspace', code: 'Backspace'});
+
+    const state = useEditorStore.getState();
+    expect(state.blurStrokes).toHaveLength(1);
+    expect(state.selectedStrokeIndices).toEqual([]);
+    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(0);
   });
 });

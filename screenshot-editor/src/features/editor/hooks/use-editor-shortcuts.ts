@@ -46,6 +46,10 @@ function getSelectedStrokeSource(state: EditorStoreState) {
   return state.blurStrokes[selectedIndices[0]] ?? null;
 }
 
+function isBackspaceKey(event: KeyboardEvent): boolean {
+  return event.key === 'Backspace' || event.code === 'Backspace';
+}
+
 export function useEditorShortcuts() {
   useEffect(() => {
     const preventBrowserZoom = (event: WheelEvent) => {
@@ -72,6 +76,27 @@ export function useEditorShortcuts() {
       const hasModifier = event.ctrlKey || event.metaKey;
       const isTyping = isTypingElement(event.target) || isTypingElement(document.activeElement);
       const store = useEditorStore.getState();
+
+      if (!hasModifier && !isTyping && isBackspaceKey(event)) {
+        const selectedIndices = getValidSelectedStrokeIndices(store);
+        if (selectedIndices.length === 0) return;
+
+        event.preventDefault();
+        const selectedIndexSet = new Set(selectedIndices);
+        const nextBlurStrokes = store.blurStrokes.filter(
+          (_, index) => !selectedIndexSet.has(index),
+        );
+        if (nextBlurStrokes.length === store.blurStrokes.length) return;
+
+        useEditorStore.setState({
+          blurStrokes: nextBlurStrokes,
+          selectedStrokeIndices: [],
+          isDrawing: false,
+          currentStroke: null,
+        });
+        store.pushHistorySnapshot();
+        return;
+      }
 
       if (hasModifier && isSlashShortcut(event)) {
         event.preventDefault();
