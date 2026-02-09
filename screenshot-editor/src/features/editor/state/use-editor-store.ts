@@ -227,6 +227,17 @@ export const useEditorStore = create<EditorStoreState>()(
       },
 
       cancelStroke: () => set({isDrawing: false, currentStroke: null}),
+      clearBlurStrokes: () => {
+        const state = get();
+        if (state.blurStrokes.length === 0 && !state.currentStroke) return;
+
+        set({
+          blurStrokes: [],
+          isDrawing: false,
+          currentStroke: null,
+        });
+        get().pushHistorySnapshot();
+      },
 
       setShowBlurOutlines: (showBlurOutlines) => set({showBlurOutlines}),
       toggleTemplatePanel: () =>

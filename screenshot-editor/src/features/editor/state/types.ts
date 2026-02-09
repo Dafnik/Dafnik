@@ -159,6 +159,7 @@ export interface EditorStoreActions {
   appendStrokePoint: (x: number, y: number) => void;
   finishStroke: () => void;
   cancelStroke: () => void;
+  clearBlurStrokes: () => void;
   setShowBlurOutlines: (enabled: boolean) => void;
   toggleTemplatePanel: () => void;
   setTemplatePanelOpen: (open: boolean) => void;

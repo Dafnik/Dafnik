@@ -27,6 +27,25 @@ describe('editor store history semantics', () => {
     expect(store.getState().historyIndex).toBe(1);
   });
 
+  it('tracks clearing blur strokes in history and supports undo', () => {
+    const store = useEditorStore;
+    store.getState().initializeEditor({image1: 'img-1', image2: null, width: 100, height: 100});
+
+    store.getState().setActiveTool('blur');
+    store.getState().startStroke(5, 5);
+    store.getState().appendStrokePoint(15, 15);
+    store.getState().finishStroke();
+
+    const historyAfterStroke = store.getState().history.length;
+
+    store.getState().clearBlurStrokes();
+    expect(store.getState().blurStrokes).toHaveLength(0);
+    expect(store.getState().history).toHaveLength(historyAfterStroke + 1);
+
+    store.getState().undo();
+    expect(store.getState().blurStrokes).toHaveLength(1);
+  });
+
   it('does not pollute history when changing zoom/pan/tool', () => {
     const store = useEditorStore;
     store.getState().initializeEditor({image1: 'img-1', image2: null, width: 100, height: 100});

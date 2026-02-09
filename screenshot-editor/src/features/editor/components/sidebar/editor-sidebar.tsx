@@ -4,10 +4,12 @@ import {
   ArrowLeftRight,
   ArrowUpDown,
   Droplets,
+  Eye,
   Grid3X3,
   ImageIcon,
   Keyboard,
   MousePointer2,
+  RotateCcw,
   Slash,
   SplitSquareVertical,
   Upload,
@@ -88,6 +90,7 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
   const setSplitDirection = useEditorStore((state) => state.setSplitDirection);
   const setLightImageSide = useEditorStore((state) => state.setLightImageSide);
   const removeSecondImage = useEditorStore((state) => state.removeSecondImage);
+  const clearBlurStrokes = useEditorStore((state) => state.clearBlurStrokes);
   const setShowBlurOutlines = useEditorStore((state) => state.setShowBlurOutlines);
   const openShortcutsModal = useEditorStore((state) => state.openShortcutsModal);
 
@@ -169,10 +172,35 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
 
       <div
         className={`border-border border-b-2 p-4 transition-opacity ${activeTool !== 'blur' ? 'pointer-events-none opacity-40' : ''}`}>
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Droplets className="text-primary h-4 w-4" />
             <h3 className="text-foreground text-sm font-semibold">Blur Settings</h3>
+          </div>
+          <div className="flex items-center gap-1">
+            <ShortcutTooltip content={outlinesTooltip}>
+              <Button
+                type="button"
+                variant={showBlurOutlines ? 'default' : 'secondary'}
+                size="icon"
+                aria-label="Toggle blur outlines"
+                aria-pressed={showBlurOutlines}
+                onClick={() => setShowBlurOutlines(!showBlurOutlines)}
+                className="h-7 w-7">
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
+            </ShortcutTooltip>
+            <ShortcutTooltip content="Reset all blurs">
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-label="Reset all blurs"
+                onClick={clearBlurStrokes}
+                className="h-7 w-7">
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </ShortcutTooltip>
           </div>
         </div>
 
@@ -207,23 +235,6 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
                 </button>
               </ShortcutTooltip>
             </div>
-          </div>
-
-          <div>
-            <Label className="text-muted-foreground mb-2 block text-xs">Outlines</Label>
-            <ShortcutTooltip content={outlinesTooltip}>
-              <button
-                type="button"
-                aria-pressed={showBlurOutlines}
-                onClick={() => setShowBlurOutlines(!showBlurOutlines)}
-                className={`flex w-full items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  showBlurOutlines
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}>
-                Show Blur Outlines
-              </button>
-            </ShortcutTooltip>
           </div>
 
           <div>

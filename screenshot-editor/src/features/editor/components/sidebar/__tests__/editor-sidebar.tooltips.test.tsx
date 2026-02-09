@@ -53,13 +53,24 @@ describe('EditorSidebar shortcut tooltips', () => {
     const user = userEvent.setup();
     renderEditorLayout();
 
-    const outlinesButton = screen.getByRole('button', {name: /show blur outlines/i});
+    const outlinesButton = screen.getByRole('button', {name: /toggle blur outlines/i});
     await user.hover(outlinesButton);
     expect(
       await screen.findByRole('tooltip', {
         name: formatShortcutTooltip('Toggle outlines', ['toggle-outlines']),
       }),
     ).toBeInTheDocument();
+  });
+
+  it('shows reset blurs tooltip', async () => {
+    useEditorStore.setState({activeTool: 'blur'});
+    const user = userEvent.setup();
+    renderEditorLayout();
+
+    const resetButton = screen.getByRole('button', {name: /reset all blurs/i});
+    await user.hover(resetButton);
+
+    expect(await screen.findByRole('tooltip', {name: 'Reset all blurs'})).toBeInTheDocument();
   });
 
   it('shows radius tooltip on label', async () => {
@@ -87,7 +98,7 @@ describe('EditorSidebar shortcut tooltips', () => {
 
     expect(
       await screen.findByRole('tooltip', {
-        name: formatShortcutTooltip('Cycle split direction', ['cycle-split-direction']),
+        name: formatShortcutTooltip('Cycle direction', ['cycle-split-direction']),
       }),
     ).toBeInTheDocument();
     expect(directionButton).not.toHaveAttribute('title');
@@ -103,7 +114,7 @@ describe('EditorSidebar shortcut tooltips', () => {
 
     expect(
       await screen.findByRole('tooltip', {
-        name: formatShortcutTooltip('Split placement', ['toggle-split-placement']),
+        name: formatShortcutTooltip('Cycle placement', ['toggle-split-placement']),
       }),
     ).toBeInTheDocument();
   });
