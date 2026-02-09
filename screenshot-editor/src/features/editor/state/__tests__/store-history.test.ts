@@ -120,4 +120,65 @@ describe('editor store history semantics', () => {
 
     vi.useRealTimers();
   });
+
+  it('updates only targeted blur strokes and commits history when requested', () => {
+    const store = useEditorStore;
+    store.getState().initializeEditor({image1: 'img-1', image2: null, width: 100, height: 100});
+    store.setState({
+      blurStrokes: [
+        {
+          points: [{x: 10, y: 10}],
+          radius: 8,
+          strength: 6,
+          blurType: 'normal',
+        },
+        {
+          points: [{x: 40, y: 40}],
+          radius: 8,
+          strength: 6,
+          blurType: 'normal',
+        },
+      ],
+    });
+    const historyBefore = store.getState().history.length;
+
+    const changed = store
+      .getState()
+      .updateBlurStrokesAtIndices([1], {strength: 9}, {commitHistory: true});
+    const state = store.getState();
+
+    expect(changed).toBe(true);
+    expect(state.blurStrokes[0].strength).toBe(6);
+    expect(state.blurStrokes[1].strength).toBe(9);
+    expect(state.history.length).toBe(historyBefore + 1);
+  });
+
+  it('returns false and avoids history when stroke patch is invalid or no-op', () => {
+    const store = useEditorStore;
+    store.getState().initializeEditor({image1: 'img-1', image2: null, width: 100, height: 100});
+    store.setState({
+      blurStrokes: [
+        {
+          points: [{x: 5, y: 6}],
+          radius: 9,
+          strength: 7,
+          blurType: 'pixelated',
+        },
+      ],
+    });
+    const historyBefore = store.getState().history.length;
+
+    const invalidChange = store
+      .getState()
+      .updateBlurStrokesAtIndices([-1, 99], {strength: 11}, {commitHistory: true});
+    const noopChange = store
+      .getState()
+      .updateBlurStrokesAtIndices([0], {blurType: 'pixelated'}, {commitHistory: true});
+
+    expect(invalidChange).toBe(false);
+    expect(noopChange).toBe(false);
+    expect(store.getState().history.length).toBe(historyBefore);
+    expect(store.getState().blurStrokes[0].blurType).toBe('pixelated');
+    expect(store.getState().blurStrokes[0].strength).toBe(7);
+  });
 });

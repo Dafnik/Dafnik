@@ -23,6 +23,7 @@ export function EditorLayout({
   onCancelLightSelection,
 }: EditorLayoutProps) {
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
+  const [selectedStrokeIndices, setSelectedStrokeIndices] = useState<number[]>([]);
   const showTemplatePanel = useEditorStore((state) => state.showTemplatePanel);
 
   return (
@@ -31,8 +32,14 @@ export function EditorLayout({
         <EditorToolbar />
 
         <div className="flex flex-1 overflow-hidden">
-          <EditorSidebar onAddSecondImage={onAddSecondImage} />
-          <EditorCanvasRoot onCanvasReady={setCanvasEl} />
+          <EditorSidebar
+            onAddSecondImage={onAddSecondImage}
+            selectedStrokeIndices={selectedStrokeIndices}
+          />
+          <EditorCanvasRoot
+            onCanvasReady={setCanvasEl}
+            onSelectedStrokeIndicesChange={setSelectedStrokeIndices}
+          />
           {showTemplatePanel && <BlurTemplatePanel />}
         </div>
 

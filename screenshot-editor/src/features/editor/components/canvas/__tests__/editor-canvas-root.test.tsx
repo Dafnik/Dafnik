@@ -80,7 +80,8 @@ describe('EditorCanvasRoot', () => {
     });
 
     const {container} = render(<EditorCanvasRoot />);
-    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="blur-outline"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(0);
     expect(container.querySelectorAll('[data-testid="blur-outline-handle"]')).toHaveLength(0);
   });
 
@@ -123,8 +124,74 @@ describe('EditorCanvasRoot', () => {
     });
 
     const {container} = render(<EditorCanvasRoot />);
-    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="blur-outline"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(0);
     expect(container.querySelectorAll('[data-testid="blur-outline-handle"]')).toHaveLength(0);
+  });
+
+  it('does not show outlines in blur mode when outlines are disabled and no box is being drawn', () => {
+    useEditorStore.setState({
+      showBlurOutlines: false,
+      activeTool: 'blur',
+      imageWidth: 200,
+      imageHeight: 120,
+      blurStrokes: [
+        {
+          points: [{x: 20, y: 30}],
+          radius: 10,
+          strength: 12,
+          blurType: 'normal',
+        },
+      ],
+      currentStroke: null,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    expect(container.querySelectorAll('[data-testid="blur-outline"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(0);
+  });
+
+  it('shows only the in-progress shift-box outline when global outlines are disabled', () => {
+    useEditorStore.setState({
+      showBlurOutlines: false,
+      imageWidth: 300,
+      imageHeight: 150,
+      image2: null,
+      activeTool: 'blur',
+      blurStrokes: [
+        {
+          points: [{x: 12, y: 16}],
+          radius: 8,
+          strength: 10,
+          blurType: 'normal',
+        },
+      ],
+      currentStroke: null,
+      isDrawing: false,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas).toBeInTheDocument();
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+
+    fireEvent.pointerDown(backgroundContainer, {
+      button: 0,
+      pointerId: 411,
+      clientX: 20,
+      clientY: 20,
+      shiftKey: true,
+    });
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 411,
+      clientX: 80,
+      clientY: 60,
+      shiftKey: true,
+    });
+
+    expect(container.querySelectorAll('[data-testid="blur-outline"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(0);
   });
 
   it('moves a single selected blur box and commits one history snapshot on pointer up', () => {

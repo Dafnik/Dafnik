@@ -186,6 +186,63 @@ export const useEditorStore = create<EditorStoreState>()(
 
       setZoom: (value) => set({zoom: Math.max(10, Math.min(500, value))}),
       setPan: (panX, panY) => set({panX, panY}),
+      updateBlurStrokesAtIndices: (indices, patch, options) => {
+        const state = get();
+        const targetIndices = [...new Set(indices)]
+          .filter((index) => Number.isInteger(index))
+          .filter((index) => index >= 0 && index < state.blurStrokes.length);
+        if (targetIndices.length === 0) return false;
+
+        const hasPatch =
+          patch.radius !== undefined ||
+          patch.strength !== undefined ||
+          patch.blurType !== undefined;
+        if (!hasPatch) return false;
+
+        const selectedSet = new Set(targetIndices);
+        let hasChanged = false;
+        const nextStrokes = state.blurStrokes.map((stroke, index) => {
+          if (!selectedSet.has(index)) return stroke;
+
+          let strokeChanged = false;
+          let nextStroke = stroke;
+
+          if (patch.radius !== undefined && stroke.radius !== patch.radius) {
+            nextStroke = nextStroke === stroke ? {...nextStroke} : nextStroke;
+            nextStroke.radius = patch.radius;
+            strokeChanged = true;
+          }
+
+          if (patch.strength !== undefined && stroke.strength !== patch.strength) {
+            nextStroke = nextStroke === stroke ? {...nextStroke} : nextStroke;
+            nextStroke.strength = patch.strength;
+            strokeChanged = true;
+          }
+
+          if (patch.blurType !== undefined && stroke.blurType !== patch.blurType) {
+            nextStroke = nextStroke === stroke ? {...nextStroke} : nextStroke;
+            nextStroke.blurType = patch.blurType;
+            strokeChanged = true;
+          }
+
+          if (!strokeChanged) return stroke;
+          hasChanged = true;
+          return nextStroke;
+        });
+
+        if (!hasChanged) return false;
+
+        set({
+          blurStrokes: nextStrokes,
+          isDrawing: false,
+          currentStroke: null,
+        });
+
+        if (options?.commitHistory ?? false) {
+          get().pushHistorySnapshot();
+        }
+        return true;
+      },
 
       startStroke: (x, y, options) => {
         const state = get();

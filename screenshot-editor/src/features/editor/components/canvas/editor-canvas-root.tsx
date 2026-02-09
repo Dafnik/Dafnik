@@ -9,9 +9,13 @@ import {BrushCursor} from './brush-cursor';
 
 interface EditorCanvasRootProps {
   onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
+  onSelectedStrokeIndicesChange?: (indices: number[]) => void;
 }
 
-export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
+export function EditorCanvasRoot({
+  onCanvasReady,
+  onSelectedStrokeIndicesChange,
+}: EditorCanvasRootProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -82,7 +86,15 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
     if (!image2) return null;
     return getSplitHandlePoint(canvasWidth, canvasHeight, splitDirection, splitRatio / 100);
   }, [canvasHeight, canvasWidth, image2, splitDirection, splitRatio]);
+  const isDrawingBoxStroke =
+    isBlurTool && currentStroke && (currentStroke.shape ?? 'brush') === 'box';
   const effectiveShowOutlines = showBlurOutlines || isSelectTool;
+  const shouldShowOverlay = effectiveShowOutlines || Boolean(isDrawingBoxStroke);
+  const overlayStrokes = useMemo(() => {
+    if (effectiveShowOutlines) return allStrokes;
+    if (isDrawingBoxStroke && currentStroke) return [currentStroke];
+    return [];
+  }, [allStrokes, currentStroke, effectiveShowOutlines, isDrawingBoxStroke]);
 
   const splitCursor =
     splitDirection === 'vertical'
@@ -110,6 +122,10 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
   useEffect(() => {
     panRef.current = {x: panX, y: panY};
   }, [panX, panY]);
+
+  useEffect(() => {
+    onSelectedStrokeIndicesChange?.(selectedStrokeIndices);
+  }, [onSelectedStrokeIndicesChange, selectedStrokeIndices]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -211,8 +227,8 @@ export function EditorCanvasRoot({onCanvasReady}: EditorCanvasRootProps) {
           ) : null}
 
           <BlurOutlineOverlay
-            visible={effectiveShowOutlines}
-            strokes={allStrokes}
+            visible={shouldShowOverlay}
+            strokes={overlayStrokes}
             canvasWidth={canvasWidth}
             canvasHeight={canvasHeight}
             selectedStrokeIndices={selectedStrokeIndices}

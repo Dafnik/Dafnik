@@ -91,7 +91,8 @@ describe('BlurOutlineOverlay', () => {
       />,
     );
 
-    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="blur-outline"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="blur-outline-selected"]')).toHaveLength(0);
     expect(container.querySelectorAll('[data-testid="blur-outline-handle"]')).toHaveLength(0);
   });
 

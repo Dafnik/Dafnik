@@ -70,7 +70,7 @@ export function BlurOutlineOverlay({
       {rects.map((rect, index) => {
         if (!rect) return null;
 
-        const selected = selectedSet.has(index) || forceDashedStyle;
+        const selected = selectedSet.has(index);
         return (
           <rect
             key={`${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`}
@@ -79,10 +79,10 @@ export function BlurOutlineOverlay({
             y={rect.y}
             width={rect.width}
             height={rect.height}
-            fill="none"
+            fill={selected ? 'rgba(34, 197, 94, 0.14)' : 'none'}
             stroke={selected ? '#22c55e' : '#ef4444'}
             strokeWidth={selected ? 2.5 : 2}
-            strokeDasharray={selected ? '5 3' : undefined}
+            strokeDasharray={selected || forceDashedStyle ? '5 3' : undefined}
             vectorEffect="non-scaling-stroke"
           />
         );

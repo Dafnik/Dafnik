@@ -134,6 +134,16 @@ export interface SetLightImageSideOptions {
   reorderImages: boolean;
 }
 
+export interface UpdateBlurStrokesAtIndicesOptions {
+  commitHistory: boolean;
+}
+
+export interface BlurStrokePatch {
+  radius?: number;
+  strength?: number;
+  blurType?: BlurType;
+}
+
 export interface LightSelectorPayload {
   firstImage: string;
   secondImage: string;
@@ -162,6 +172,11 @@ export interface EditorStoreActions {
   setLightImageSide: (side: LightImageSide, options?: Partial<SetLightImageSideOptions>) => void;
   setZoom: (value: number) => void;
   setPan: (x: number, y: number) => void;
+  updateBlurStrokesAtIndices: (
+    indices: number[],
+    patch: BlurStrokePatch,
+    options?: Partial<UpdateBlurStrokesAtIndicesOptions>,
+  ) => boolean;
   startStroke: (x: number, y: number, options?: {shape?: BlurStrokeShape}) => void;
   setCurrentStrokeEndpoint: (x: number, y: number) => void;
   appendStrokePoints: (points: Point[]) => void;

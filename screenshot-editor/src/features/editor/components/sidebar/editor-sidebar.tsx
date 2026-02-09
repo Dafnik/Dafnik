@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect, useMemo, useRef} from 'react';
 import type {ChangeEvent, ReactNode} from 'react';
 import {
   ArrowLeftRight,
@@ -23,11 +23,12 @@ import {
   formatShortcutById,
   formatShortcutTooltip,
 } from '@/features/editor/lib/shortcut-definitions';
-import type {SplitDirection} from '@/features/editor/state/types';
+import type {BlurType, SplitDirection} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface EditorSidebarProps {
   onAddSecondImage: (dataUrl: string, fileName: string | null) => void;
+  selectedStrokeIndices: number[];
 }
 
 interface ShortcutTooltipProps {
@@ -70,14 +71,16 @@ function isTypingElement(target: EventTarget | null): boolean {
   );
 }
 
-export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
+export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingSelectedStrengthHistoryRef = useRef(false);
 
   const image2 = useEditorStore((state) => state.image2);
   const activeTool = useEditorStore((state) => state.activeTool);
   const blurType = useEditorStore((state) => state.blurType);
   const brushRadius = useEditorStore((state) => state.brushRadius);
   const brushStrength = useEditorStore((state) => state.brushStrength);
+  const blurStrokes = useEditorStore((state) => state.blurStrokes);
   const splitRatio = useEditorStore((state) => state.splitRatio);
   const splitDirection = useEditorStore((state) => state.splitDirection);
   const lightImageSide = useEditorStore((state) => state.lightImageSide);
@@ -87,6 +90,8 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
   const setBlurType = useEditorStore((state) => state.setBlurType);
   const setBrushRadius = useEditorStore((state) => state.setBrushRadius);
   const setBrushStrength = useEditorStore((state) => state.setBrushStrength);
+  const updateBlurStrokesAtIndices = useEditorStore((state) => state.updateBlurStrokesAtIndices);
+  const pushHistorySnapshot = useEditorStore((state) => state.pushHistorySnapshot);
   const setSplitRatio = useEditorStore((state) => state.setSplitRatio);
   const setSplitDirection = useEditorStore((state) => state.setSplitDirection);
   const setLightImageSide = useEditorStore((state) => state.setLightImageSide);
@@ -120,6 +125,101 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
   const shortcutsTooltip = formatShortcutTooltip('Shortcuts', ['shortcuts-modal']);
   const uploadDialogTooltip = formatShortcutTooltip('Open file dialog', ['open-upload-dialog']);
 
+  const validSelectedStrokeIndices = useMemo(() => {
+    const unique = [...new Set(selectedStrokeIndices)];
+    return unique
+      .filter((index) => Number.isInteger(index))
+      .filter((index) => index >= 0 && index < blurStrokes.length);
+  }, [blurStrokes.length, selectedStrokeIndices]);
+
+  const isSelectToolWithSelection =
+    activeTool === 'select' && validSelectedStrokeIndices.length > 0;
+  const canEditBlurType = activeTool === 'blur' || isSelectToolWithSelection;
+  const canEditStrength = activeTool === 'blur' || isSelectToolWithSelection;
+  const canEditRadius = activeTool === 'blur';
+  const outlinesForcedOn = activeTool === 'select';
+  const outlinesTogglePressed = outlinesForcedOn || showBlurOutlines;
+  const selectedSourceStroke = isSelectToolWithSelection
+    ? (blurStrokes[validSelectedStrokeIndices[0]] ?? null)
+    : null;
+  const displayedBlurType = selectedSourceStroke?.blurType ?? blurType;
+  const displayedStrength = selectedSourceStroke?.strength ?? brushStrength;
+
+  const handleBlurTypeChange = useCallback(
+    (nextType: BlurType) => {
+      if (isSelectToolWithSelection) {
+        updateBlurStrokesAtIndices(
+          validSelectedStrokeIndices,
+          {blurType: nextType},
+          {commitHistory: true},
+        );
+        return;
+      }
+      if (activeTool === 'blur') {
+        setBlurType(nextType);
+      }
+    },
+    [
+      activeTool,
+      isSelectToolWithSelection,
+      setBlurType,
+      updateBlurStrokesAtIndices,
+      validSelectedStrokeIndices,
+    ],
+  );
+
+  const handleStrengthChange = useCallback(
+    (nextStrength: number) => {
+      if (isSelectToolWithSelection) {
+        const changed = updateBlurStrokesAtIndices(
+          validSelectedStrokeIndices,
+          {strength: nextStrength},
+          {commitHistory: false},
+        );
+        if (changed) {
+          pendingSelectedStrengthHistoryRef.current = true;
+        }
+        return;
+      }
+      if (activeTool === 'blur') {
+        setBrushStrength(nextStrength);
+      }
+    },
+    [
+      activeTool,
+      isSelectToolWithSelection,
+      setBrushStrength,
+      updateBlurStrokesAtIndices,
+      validSelectedStrokeIndices,
+    ],
+  );
+
+  const handleStrengthCommit = useCallback(
+    (nextStrength: number) => {
+      if (!isSelectToolWithSelection) return;
+
+      const changed = updateBlurStrokesAtIndices(
+        validSelectedStrokeIndices,
+        {strength: nextStrength},
+        {commitHistory: false},
+      );
+      if (changed) {
+        pendingSelectedStrengthHistoryRef.current = true;
+      }
+
+      if (pendingSelectedStrengthHistoryRef.current) {
+        pushHistorySnapshot();
+        pendingSelectedStrengthHistoryRef.current = false;
+      }
+    },
+    [
+      isSelectToolWithSelection,
+      pushHistorySnapshot,
+      updateBlurStrokesAtIndices,
+      validSelectedStrokeIndices,
+    ],
+  );
+
   useEffect(() => {
     if (image2) return;
 
@@ -134,6 +234,12 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
     window.addEventListener('keydown', handleShortcut, true);
     return () => window.removeEventListener('keydown', handleShortcut, true);
   }, [image2]);
+
+  useEffect(() => {
+    if (!isSelectToolWithSelection) {
+      pendingSelectedStrengthHistoryRef.current = false;
+    }
+  }, [isSelectToolWithSelection]);
 
   return (
     <aside
@@ -184,8 +290,7 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
         </div>
       </div>
 
-      <div
-        className={`border-border border-b-2 p-4 transition-opacity ${activeTool !== 'blur' ? 'pointer-events-none opacity-40' : ''}`}>
+      <div className="border-border border-b-2 p-4">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Droplets className="text-primary h-4 w-4" />
@@ -195,10 +300,11 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
             <ShortcutTooltip content={outlinesTooltip}>
               <Button
                 type="button"
-                variant={showBlurOutlines ? 'default' : 'secondary'}
+                variant={outlinesTogglePressed ? 'default' : 'secondary'}
                 size="icon"
                 aria-label="Toggle blur outlines"
-                aria-pressed={showBlurOutlines}
+                aria-pressed={outlinesTogglePressed}
+                disabled={outlinesForcedOn}
                 onClick={() => setShowBlurOutlines(!showBlurOutlines)}
                 className="h-7 w-7">
                 <Eye className="h-3.5 w-3.5" />
@@ -225,11 +331,12 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
               <ShortcutTooltip content={blurTypeTooltip}>
                 <button
                   type="button"
-                  onClick={() => setBlurType('normal')}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    blurType === 'normal'
+                  disabled={!canEditBlurType}
+                  onClick={() => handleBlurTypeChange('normal')}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    displayedBlurType === 'normal'
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
                   }`}>
                   <Droplets className="h-3 w-3" />
                   Normal
@@ -238,11 +345,12 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
               <ShortcutTooltip content={blurTypeTooltip}>
                 <button
                   type="button"
-                  onClick={() => setBlurType('pixelated')}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    blurType === 'pixelated'
+                  disabled={!canEditBlurType}
+                  onClick={() => handleBlurTypeChange('pixelated')}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    displayedBlurType === 'pixelated'
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
                   }`}>
                   <Grid3X3 className="h-3 w-3" />
                   Pixelated
@@ -253,19 +361,32 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <ShortcutTooltip content={radiusTooltip}>
-                <Label className="text-muted-foreground text-xs">Radius</Label>
+              <ShortcutTooltip content={strengthTooltip}>
+                <Label
+                  className={`text-xs ${canEditStrength ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
+                  Strength
+                </Label>
               </ShortcutTooltip>
-              <span className="text-muted-foreground text-xs tabular-nums">{brushRadius}px</span>
+              <span
+                className={`text-xs tabular-nums ${canEditStrength ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
+                {displayedStrength}
+              </span>
             </div>
-            <ShortcutTooltip content={radiusTooltip}>
-              <div>
+            <ShortcutTooltip content={strengthTooltip}>
+              <div
+                className={`rounded-md px-1 py-1 transition-opacity ${
+                  canEditStrength
+                    ? ''
+                    : 'bg-muted/35 border-border/70 border border-dashed opacity-55'
+                }`}>
                 <Slider
-                  value={[brushRadius]}
-                  onValueChange={([value]) => setBrushRadius(value)}
-                  min={5}
-                  max={100}
+                  value={[displayedStrength]}
+                  onValueChange={([value]) => handleStrengthChange(value)}
+                  onValueCommit={([value]) => handleStrengthCommit(value)}
+                  min={1}
+                  max={30}
                   step={1}
+                  disabled={!canEditStrength}
                   className="w-full"
                 />
               </div>
@@ -274,19 +395,31 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <ShortcutTooltip content={strengthTooltip}>
-                <Label className="text-muted-foreground text-xs">Strength</Label>
+              <ShortcutTooltip content={radiusTooltip}>
+                <Label
+                  className={`text-xs ${canEditRadius ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
+                  Radius
+                </Label>
               </ShortcutTooltip>
-              <span className="text-muted-foreground text-xs tabular-nums">{brushStrength}</span>
+              <span
+                className={`text-xs tabular-nums ${canEditRadius ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
+                {brushRadius}px
+              </span>
             </div>
-            <ShortcutTooltip content={strengthTooltip}>
-              <div>
+            <ShortcutTooltip content={radiusTooltip}>
+              <div
+                className={`rounded-md px-1 py-1 transition-opacity ${
+                  canEditRadius
+                    ? ''
+                    : 'bg-muted/35 border-border/70 border border-dashed opacity-55'
+                }`}>
                 <Slider
-                  value={[brushStrength]}
-                  onValueChange={([value]) => setBrushStrength(value)}
-                  min={1}
-                  max={30}
+                  value={[brushRadius]}
+                  onValueChange={([value]) => setBrushRadius(value)}
+                  min={5}
+                  max={100}
                   step={1}
+                  disabled={!canEditRadius}
                   className="w-full"
                 />
               </div>
