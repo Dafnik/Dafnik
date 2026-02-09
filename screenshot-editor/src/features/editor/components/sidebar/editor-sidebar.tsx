@@ -26,7 +26,7 @@ import type {SplitDirection} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface EditorSidebarProps {
-  onAddSecondImage: (dataUrl: string) => void;
+  onAddSecondImage: (dataUrl: string, fileName: string | null) => void;
 }
 
 interface ShortcutTooltipProps {
@@ -101,7 +101,7 @@ export function EditorSidebar({onAddSecondImage}: EditorSidebarProps) {
 
       const reader = new FileReader();
       reader.onload = (loadEvent) => {
-        onAddSecondImage(loadEvent.target?.result as string);
+        onAddSecondImage(loadEvent.target?.result as string, file.name);
       };
       reader.readAsDataURL(file);
       event.target.value = '';

@@ -49,15 +49,17 @@ interface ExportModalProps {
 
 export function ExportModal({canvasRef}: ExportModalProps) {
   const open = useEditorStore((state) => state.showExportModal);
+  const exportBaseName = useEditorStore((state) => state.exportBaseName);
+  const hasSplitImage = useEditorStore((state) => Boolean(state.image2));
   const closeExportModal = useEditorStore((state) => state.closeExportModal);
   const [fileName, setFileName] = useState(getDefaultName);
   const [selectedFormats, setSelectedFormats] = useState<ExportFormat[]>(getSavedFormats);
 
   useEffect(() => {
     if (!open) return;
-    setFileName(getDefaultName());
+    setFileName(exportBaseName || getDefaultName());
     setSelectedFormats(getSavedFormats());
-  }, [open]);
+  }, [exportBaseName, open]);
 
   const toggleFormat = useCallback((format: ExportFormat) => {
     setSelectedFormats((prev) => {
@@ -144,6 +146,12 @@ export function ExportModal({canvasRef}: ExportModalProps) {
               placeholder="screenshot"
               autoFocus
             />
+            <p className="text-muted-foreground mt-1 text-[11px]">
+              Tip:{' '}
+              {hasSplitImage
+                ? 'In split mode, the default name is derived from the shared prefix of both uploads.'
+                : 'Upload two matching files in split mode to auto-derive a shared prefix name.'}
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

@@ -10,7 +10,7 @@ import {EditorToolbar} from '@/features/editor/components/toolbar/editor-toolbar
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface EditorLayoutProps {
-  onAddSecondImage: (dataUrl: string) => void;
+  onAddSecondImage: (dataUrl: string, fileName: string | null) => void;
   onSelectFirstLightImage: () => void;
   onSelectSecondLightImage: () => void;
   onCancelLightSelection: () => void;

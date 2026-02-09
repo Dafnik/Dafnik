@@ -2,6 +2,10 @@ import {useCallback, useEffect, useRef} from 'react';
 import {DropZone} from '@/components/drop-zone';
 import {EditorLayout} from '@/features/editor/components/layout/editor-layout';
 import {useEditorShortcuts} from '@/features/editor/hooks/use-editor-shortcuts';
+import {
+  deriveSingleImageExportName,
+  deriveSplitExportName,
+} from '@/features/editor/lib/export-filename';
 import {classifyByLuminance} from '@/features/editor/services/image-classification';
 import {getImageDimensions} from '@/features/editor/services/file-loading';
 import {useEditorStore, useEditorStoreApi} from '@/features/editor/state/use-editor-store';
@@ -25,6 +29,7 @@ export function EditorRoot() {
 
   const editorStoreApi = useEditorStoreApi();
   const pendingSelectionResolver = useRef<((selection: LightSelection) => void) | null>(null);
+  const primaryUploadBaseNameRef = useRef<string | null>(null);
 
   const requestLightImageSelection = useCallback(
     (firstImage: string, secondImage: string) => {
@@ -71,10 +76,19 @@ export function EditorRoot() {
   );
 
   const handleImagesLoaded = useCallback(
-    (inputImage1: string, inputImage2: string | null) => {
+    (
+      inputImage1: string,
+      inputImage2: string | null,
+      firstFileName: string | null,
+      secondFileName: string | null,
+    ) => {
       const init = async () => {
         let image1 = inputImage1;
         let image2 = inputImage2;
+        const singleExportName = deriveSingleImageExportName(firstFileName);
+        const splitExportName = deriveSplitExportName(firstFileName, secondFileName);
+        const exportBaseName = inputImage2 ? splitExportName : singleExportName;
+        primaryUploadBaseNameRef.current = singleExportName;
 
         if (inputImage2) {
           const classified = await classifyPair(inputImage1, inputImage2);
@@ -95,6 +109,7 @@ export function EditorRoot() {
           image2,
           width: dimensions.width,
           height: dimensions.height,
+          exportBaseName,
         });
       };
 
@@ -104,7 +119,7 @@ export function EditorRoot() {
   );
 
   const handleAddSecondImage = useCallback(
-    (dataUrl: string) => {
+    (dataUrl: string, fileName: string | null) => {
       const addSecond = async () => {
         const state = editorStoreApi.getState();
         if (!state.image1) return;
@@ -119,6 +134,13 @@ export function EditorRoot() {
         );
 
         editorStoreApi.setState({image1: ordered.image1, image2: ordered.image2});
+        const derivedExportName = deriveSplitExportName(
+          primaryUploadBaseNameRef.current ?? state.exportBaseName,
+          fileName,
+        );
+        if (derivedExportName) {
+          editorStoreApi.getState().setExportBaseName(derivedExportName);
+        }
         editorStoreApi.getState().pushHistorySnapshot();
       };
 

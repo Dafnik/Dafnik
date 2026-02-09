@@ -4,7 +4,12 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {Upload, ImageIcon} from 'lucide-react';
 
 interface DropZoneProps {
-  onImagesLoaded: (image1: string, image2: string | null) => void;
+  onImagesLoaded: (
+    image1: string,
+    image2: string | null,
+    firstFileName: string | null,
+    secondFileName: string | null,
+  ) => void;
 }
 
 function normalizeKey(key: string): string {
@@ -52,7 +57,12 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
       );
 
       Promise.all(readers).then((results) => {
-        onImagesLoaded(results[0], results[1] || null);
+        onImagesLoaded(
+          results[0],
+          results[1] || null,
+          imageFiles[0]?.name ?? null,
+          imageFiles[1]?.name ?? null,
+        );
       });
     },
     [onImagesLoaded],

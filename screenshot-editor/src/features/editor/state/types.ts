@@ -82,6 +82,7 @@ export type LightSelectorState = 'idle' | 'awaitingSelection' | 'resolved' | 'ca
 export interface UiSlice {
   isEditing: boolean;
   showExportModal: boolean;
+  exportBaseName: string | null;
   showShortcutsModal: boolean;
   showLightSelectorModal: boolean;
   selectorFirstImage: string | null;
@@ -115,6 +116,7 @@ export interface InitializeEditorPayload {
   image2: string | null;
   width: number;
   height: number;
+  exportBaseName?: string | null;
 }
 
 export interface SetSplitDirectionOptions {
@@ -174,6 +176,7 @@ export interface EditorStoreActions {
   loadBlurTemplate: (templateId: string) => ActionResult;
   openExportModal: () => void;
   closeExportModal: () => void;
+  setExportBaseName: (name: string | null) => void;
   openShortcutsModal: () => void;
   closeShortcutsModal: () => void;
   toggleShortcutsModal: () => void;

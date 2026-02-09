@@ -52,6 +52,7 @@ const baseState = {
   currentStroke: null,
   isEditing: false,
   showExportModal: false,
+  exportBaseName: null,
   showShortcutsModal: false,
   showLightSelectorModal: false,
   selectorFirstImage: null,
@@ -71,7 +72,7 @@ export const useEditorStore = create<EditorStoreState>()(
     (set, get) => ({
       ...baseState,
 
-      initializeEditor: ({image1, image2, width, height}) => {
+      initializeEditor: ({image1, image2, width, height, exportBaseName}) => {
         clearSplitRatioTimer();
         set((state) => ({
           image1,
@@ -87,6 +88,7 @@ export const useEditorStore = create<EditorStoreState>()(
           panX: 0,
           panY: 0,
           showExportModal: false,
+          exportBaseName: exportBaseName ?? null,
           showShortcutsModal: false,
           showLightSelectorModal: false,
           selectorFirstImage: null,
@@ -111,6 +113,7 @@ export const useEditorStore = create<EditorStoreState>()(
           currentStroke: null,
           isEditing: false,
           showExportModal: false,
+          exportBaseName: null,
           showShortcutsModal: false,
           showLightSelectorModal: false,
           selectorFirstImage: null,
@@ -435,6 +438,7 @@ export const useEditorStore = create<EditorStoreState>()(
 
       openExportModal: () => set({showExportModal: true}),
       closeExportModal: () => set({showExportModal: false}),
+      setExportBaseName: (name) => set({exportBaseName: name?.trim() || null}),
       openShortcutsModal: () => set({showShortcutsModal: true}),
       closeShortcutsModal: () => set({showShortcutsModal: false}),
       toggleShortcutsModal: () => set((state) => ({showShortcutsModal: !state.showShortcutsModal})),
