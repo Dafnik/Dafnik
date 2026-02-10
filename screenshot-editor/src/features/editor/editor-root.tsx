@@ -1,4 +1,5 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {DesktopOnlyPage} from '@/components/desktop-only-page';
 import {DropZone} from '@/components/drop-zone';
 import {EditorLayout} from '@/features/editor/components/layout/editor-layout';
 import {useEditorShortcuts} from '@/features/editor/hooks/use-editor-shortcuts';
@@ -12,8 +13,16 @@ import {orderBySidePreference} from '@/features/editor/state/store/helpers';
 import {useEditorStore, useEditorStoreApi} from '@/features/editor/state/use-editor-store';
 import type {LightSelection} from '@/features/editor/state/types';
 
+const MIN_DESKTOP_WIDTH_PX = 1012;
+
+function getViewportWidth(): number {
+  if (typeof window === 'undefined') return MIN_DESKTOP_WIDTH_PX;
+  return window.innerWidth;
+}
+
 export function EditorRoot() {
   useEditorShortcuts();
+  const [viewportWidth, setViewportWidth] = useState(getViewportWidth);
 
   const isEditing = useEditorStore((state) => state.isEditing);
   const lightImageSide = useEditorStore((state) => state.lightImageSide);
@@ -50,6 +59,12 @@ export function EditorRoot() {
       pendingSelectionResolver.current?.('cancel');
       pendingSelectionResolver.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(getViewportWidth());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const classifyPair = useCallback(
@@ -142,6 +157,10 @@ export function EditorRoot() {
     },
     [classifyPair, editorStoreApi],
   );
+
+  if (viewportWidth < MIN_DESKTOP_WIDTH_PX) {
+    return <DesktopOnlyPage minWidthPx={MIN_DESKTOP_WIDTH_PX} />;
+  }
 
   if (!isEditing) {
     return <DropZone onImagesLoaded={handleImagesLoaded} />;
