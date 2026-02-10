@@ -12,7 +12,7 @@ export function DesktopOnlyPage({minWidthPx}: DesktopOnlyPageProps) {
       }}>
       <section className="bg-card border-border max-w-lg border-4 p-8 text-center shadow-[10px_10px_0_0_rgba(0,0,0,0.72)]">
         <h1 className="text-foreground text-2xl font-semibold tracking-tight">
-          Screenshot Editor desktop only
+          Screenshot Editor is desktop only
         </h1>
         <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
           This editor needs a larger screen and can only be used on desktop devices.
