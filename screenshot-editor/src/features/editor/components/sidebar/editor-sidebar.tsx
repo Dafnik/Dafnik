@@ -1,23 +1,19 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import type {ChangeEvent} from 'react';
 import {createEmailBlurStrokes} from '@/features/editor/lib/email-blur-strokes';
-import {isOpenUploadShortcut, isTypingElement} from '@/features/editor/lib/keyboard';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
 import {detectEmailsInImage} from '@/features/editor/services/email-detection';
 import type {BlurType} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
+import {BlurTemplatePanel} from './blur-template-panel';
 import {BlurSettingsSection} from './editor-sidebar/blur-settings-section';
 import {ShortcutsSection} from './editor-sidebar/shortcuts-section';
-import {SplitViewSection} from './editor-sidebar/split-view-section';
 import {ToolSection} from './editor-sidebar/tool-section';
 
 interface EditorSidebarProps {
-  onAddSecondImage: (dataUrl: string, fileName: string | null) => void;
   selectedStrokeIndices: number[];
 }
 
-export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorSidebarProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   const pendingSelectedStrengthHistoryRef = useRef(false);
   const [isAutoBlurEmailsPending, setIsAutoBlurEmailsPending] = useState(false);
   const [autoBlurEmailsStatus, setAutoBlurEmailsStatus] = useState<string | undefined>(undefined);
@@ -28,54 +24,34 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
   const imageHeight = useEditorStore((state) => state.imageHeight);
   const activeTool = useEditorStore((state) => state.activeTool);
   const blurType = useEditorStore((state) => state.blurType);
+  const blurStrokeShape = useEditorStore((state) => state.blurStrokeShape);
   const brushRadius = useEditorStore((state) => state.brushRadius);
   const brushStrength = useEditorStore((state) => state.brushStrength);
   const isShiftPressed = useEditorStore((state) => state.isShiftPressed);
   const blurStrokes = useEditorStore((state) => state.blurStrokes);
   const splitRatio = useEditorStore((state) => state.splitRatio);
   const splitDirection = useEditorStore((state) => state.splitDirection);
-  const lightImageSide = useEditorStore((state) => state.lightImageSide);
   const showBlurOutlines = useEditorStore((state) => state.showBlurOutlines);
 
   const setActiveTool = useEditorStore((state) => state.setActiveTool);
   const setBlurType = useEditorStore((state) => state.setBlurType);
+  const setBlurStrokeShape = useEditorStore((state) => state.setBlurStrokeShape);
   const setBrushRadius = useEditorStore((state) => state.setBrushRadius);
   const setBrushStrength = useEditorStore((state) => state.setBrushStrength);
   const updateBlurStrokesAtIndices = useEditorStore((state) => state.updateBlurStrokesAtIndices);
   const appendBlurStrokes = useEditorStore((state) => state.appendBlurStrokes);
   const pushHistorySnapshot = useEditorStore((state) => state.pushHistorySnapshot);
-  const setSplitRatio = useEditorStore((state) => state.setSplitRatio);
-  const setSplitDirection = useEditorStore((state) => state.setSplitDirection);
-  const setLightImageSide = useEditorStore((state) => state.setLightImageSide);
-  const removeSecondImage = useEditorStore((state) => state.removeSecondImage);
   const clearBlurStrokes = useEditorStore((state) => state.clearBlurStrokes);
   const setShowBlurOutlines = useEditorStore((state) => state.setShowBlurOutlines);
   const openShortcutsModal = useEditorStore((state) => state.openShortcutsModal);
 
-  const handleFileSelect = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        onAddSecondImage(loadEvent.target?.result as string, file.name);
-      };
-      reader.readAsDataURL(file);
-      event.target.value = '';
-    },
-    [onAddSecondImage],
-  );
-
   const switchToolTooltip = formatShortcutTooltip('Switch tool', ['switch-tool']);
+  const modeTooltip = 'Hold Shift to temporarily switch modes';
   const blurTypeTooltip = formatShortcutTooltip('Toggle blur type', ['toggle-blur-type']);
   const outlinesTooltip = formatShortcutTooltip('Toggle outlines', ['toggle-outlines']);
   const radiusTooltip = formatShortcutTooltip('Radius +/-', ['radius-step']);
   const strengthTooltip = formatShortcutTooltip('Strength +/-', ['strength-step']);
-  const directionTooltip = formatShortcutTooltip('Cycle direction', ['cycle-split-direction']);
-  const placementTooltip = formatShortcutTooltip('Cycle placement', ['toggle-split-placement']);
   const shortcutsTooltip = formatShortcutTooltip('Shortcuts', ['shortcuts-modal']);
-  const uploadDialogTooltip = formatShortcutTooltip('Open file dialog', ['open-upload-dialog']);
   const autoBlurEmailsTooltip = 'Auto blur emails';
 
   const validSelectedStrokeIndices = useMemo(() => {
@@ -87,9 +63,16 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
 
   const isSelectToolWithSelection =
     activeTool === 'select' && validSelectedStrokeIndices.length > 0;
+  const effectiveBlurStrokeShape =
+    activeTool === 'blur' && isShiftPressed
+      ? blurStrokeShape === 'brush'
+        ? 'box'
+        : 'brush'
+      : blurStrokeShape;
+  const canEditBlurMode = activeTool === 'blur';
   const canEditBlurType = activeTool === 'blur' || isSelectToolWithSelection;
   const canEditStrength = activeTool === 'blur' || isSelectToolWithSelection;
-  const canEditRadius = activeTool === 'blur' && !isShiftPressed;
+  const canEditRadius = activeTool === 'blur' && effectiveBlurStrokeShape === 'brush';
   const outlinesForcedOn = activeTool === 'select';
   const outlinesTogglePressed = outlinesForcedOn || showBlurOutlines;
   const selectedSourceStroke = isSelectToolWithSelection
@@ -239,21 +222,6 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
   ]);
 
   useEffect(() => {
-    if (image2) return;
-
-    const handleShortcut = (event: KeyboardEvent) => {
-      if (!isOpenUploadShortcut(event)) return;
-      if (isTypingElement(event.target) || isTypingElement(document.activeElement)) return;
-
-      event.preventDefault();
-      fileInputRef.current?.click();
-    };
-
-    window.addEventListener('keydown', handleShortcut, true);
-    return () => window.removeEventListener('keydown', handleShortcut, true);
-  }, [image2]);
-
-  useEffect(() => {
     if (!isSelectToolWithSelection) {
       pendingSelectedStrengthHistoryRef.current = false;
     }
@@ -274,6 +242,7 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
       />
 
       <BlurSettingsSection
+        modeTooltip={modeTooltip}
         blurTypeTooltip={blurTypeTooltip}
         outlinesTooltip={outlinesTooltip}
         radiusTooltip={radiusTooltip}
@@ -281,12 +250,15 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
         outlinesTogglePressed={outlinesTogglePressed}
         outlinesForcedOn={outlinesForcedOn}
         showBlurOutlines={showBlurOutlines}
+        canEditBlurMode={canEditBlurMode}
         canEditBlurType={canEditBlurType}
         canEditStrength={canEditStrength}
         canEditRadius={canEditRadius}
+        blurStrokeShape={effectiveBlurStrokeShape}
         displayedBlurType={displayedBlurType}
         displayedStrength={displayedStrength}
         brushRadius={brushRadius}
+        onBlurStrokeShapeChange={setBlurStrokeShape}
         onToggleOutlines={() => setShowBlurOutlines(!showBlurOutlines)}
         onClearBlurStrokes={clearBlurStrokes}
         onBlurTypeChange={handleBlurTypeChange}
@@ -299,33 +271,11 @@ export function EditorSidebar({onAddSecondImage, selectedStrokeIndices}: EditorS
         autoBlurEmailsTooltip={autoBlurEmailsTooltip}
         autoBlurEmailsStatus={autoBlurEmailsStatus}
       />
-
-      <SplitViewSection
-        image2={image2}
-        splitDirection={splitDirection}
-        splitRatio={splitRatio}
-        lightImageSide={lightImageSide}
-        uploadDialogTooltip={uploadDialogTooltip}
-        directionTooltip={directionTooltip}
-        placementTooltip={placementTooltip}
-        fileInputRef={fileInputRef}
-        onSetSplitDirection={(dir) => setSplitDirection(dir, {commitHistory: true})}
-        onSetSplitRatio={(value) => setSplitRatio(value, {debouncedHistory: true})}
-        onSetLightImageSide={(side) => setLightImageSide(side, {reorderImages: true})}
-        onRemoveSecondImage={removeSecondImage}
-      />
+      <BlurTemplatePanel />
 
       <ShortcutsSection
         shortcutsTooltip={shortcutsTooltip}
         onOpenShortcutsModal={openShortcutsModal}
-      />
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
       />
     </aside>
   );

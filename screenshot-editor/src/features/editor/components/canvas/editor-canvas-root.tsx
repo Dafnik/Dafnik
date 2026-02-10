@@ -30,6 +30,7 @@ export function EditorCanvasRoot({
     panY,
     activeTool,
     isShiftPressed,
+    blurStrokeShape,
     brushRadius,
     showBlurOutlines,
     blurStrokes,
@@ -47,6 +48,7 @@ export function EditorCanvasRoot({
       panY: state.panY,
       activeTool: state.activeTool,
       isShiftPressed: state.isShiftPressed,
+      blurStrokeShape: state.blurStrokeShape,
       brushRadius: state.brushRadius,
       showBlurOutlines: state.showBlurOutlines,
       blurStrokes: state.blurStrokes,
@@ -82,7 +84,13 @@ export function EditorCanvasRoot({
   );
 
   const isBlurTool = activeTool === 'blur';
-  const isBlurShiftMode = isBlurTool && isShiftPressed;
+  const effectiveBlurShape =
+    isBlurTool && isShiftPressed
+      ? blurStrokeShape === 'brush'
+        ? 'box'
+        : 'brush'
+      : blurStrokeShape;
+  const isBlurAreaMode = isBlurTool && effectiveBlurShape === 'box';
   const isDragTool = activeTool === 'drag';
   const isSelectTool = activeTool === 'select';
   const splitHandlePoint = useMemo(() => {
@@ -119,7 +127,7 @@ export function EditorCanvasRoot({
           : isSelectTool
             ? selectCursor
             : isBlurTool
-              ? isBlurShiftMode
+              ? isBlurAreaMode
                 ? 'cell'
                 : 'crosshair'
               : 'default';
@@ -248,7 +256,7 @@ export function EditorCanvasRoot({
             cursorPos={cursorPos}
             isPanning={isPanning}
             isBlurTool={isBlurTool}
-            isShiftMode={isBlurShiftMode}
+            isAreaMode={isBlurAreaMode}
             brushRadius={brushRadius}
             scale={scale}
           />

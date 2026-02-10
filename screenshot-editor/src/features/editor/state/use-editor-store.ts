@@ -53,6 +53,7 @@ export const useEditorStore = create<EditorStoreState>()(
         getPersistedSettingsSlice({
           splitRatio: state.splitRatio,
           splitDirection: state.splitDirection,
+          blurStrokeShape: state.blurStrokeShape,
           brushRadius: state.brushRadius,
           brushStrength: state.brushStrength,
           blurType: state.blurType,

@@ -25,10 +25,8 @@ const baseTemplate: BlurTemplate = {
 };
 
 describe('template panel integration', () => {
-  it('toggles right panel via Template button in toolbar', async () => {
-    const user = userEvent.setup();
-
-    useEditorStore.setState({activeTool: 'blur', showTemplatePanel: false});
+  it('always renders the template section in the left sidebar', () => {
+    useEditorStore.setState({activeTool: 'blur'});
 
     render(
       <EditorLayout
@@ -39,13 +37,8 @@ describe('template panel integration', () => {
       />,
     );
 
-    expect(screen.queryByText('Blur Templates')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', {name: 'Template'}));
     expect(screen.getByText('Blur Templates')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', {name: 'Close'}));
-    expect(screen.queryByText('Blur Templates')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Close'})).not.toBeInTheDocument();
   });
 
   it('loads on card click, then supports update and delete flow', async () => {
@@ -55,7 +48,6 @@ describe('template panel integration', () => {
       blurTemplates: [baseTemplate],
       selectedTemplateId: null,
       blurStrokes: [],
-      showTemplatePanel: true,
       imageWidth: 100,
       imageHeight: 100,
     });
@@ -102,7 +94,6 @@ describe('template panel integration', () => {
       blurTemplates: [baseTemplate, secondTemplate],
       selectedTemplateId: null,
       blurStrokes: [],
-      showTemplatePanel: true,
       imageWidth: 100,
       imageHeight: 100,
     });

@@ -98,6 +98,7 @@ export function getPersistedSettingsSlice(settings: PersistedSettings): Persiste
   return {
     splitRatio: settings.splitRatio,
     splitDirection: settings.splitDirection,
+    blurStrokeShape: settings.blurStrokeShape,
     brushRadius: settings.brushRadius,
     brushStrength: settings.brushStrength,
     blurType: settings.blurType,

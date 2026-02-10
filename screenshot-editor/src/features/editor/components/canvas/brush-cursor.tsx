@@ -2,7 +2,7 @@ interface BrushCursorProps {
   cursorPos: {x: number; y: number} | null;
   isPanning: boolean;
   isBlurTool: boolean;
-  isShiftMode: boolean;
+  isAreaMode: boolean;
   brushRadius: number;
   scale: number;
 }
@@ -11,11 +11,11 @@ export function BrushCursor({
   cursorPos,
   isPanning,
   isBlurTool,
-  isShiftMode,
+  isAreaMode,
   brushRadius,
   scale,
 }: BrushCursorProps) {
-  if (!cursorPos || isPanning || !isBlurTool || isShiftMode) return null;
+  if (!cursorPos || isPanning || !isBlurTool || isAreaMode) return null;
 
   return (
     <div

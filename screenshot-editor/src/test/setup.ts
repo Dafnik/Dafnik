@@ -21,7 +21,7 @@ beforeEach(() => {
   useEditorStore.setState({
     blurTemplates: [],
     selectedTemplateId: null,
-    showTemplatePanel: false,
+    showSplitViewSidebar: false,
   });
 });
 

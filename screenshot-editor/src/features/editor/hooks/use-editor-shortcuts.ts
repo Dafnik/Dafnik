@@ -199,7 +199,6 @@ export function useEditorShortcuts() {
         const template = store.blurTemplates[templateSlotIndex];
         if (!template) return;
 
-        store.setTemplatePanelOpen(true);
         store.loadBlurTemplate(template.id);
         return;
       }

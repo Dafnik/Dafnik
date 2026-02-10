@@ -79,6 +79,7 @@ describe('EditorCanvasRoot split handle and drawing behavior', () => {
       imageHeight: 150,
       image2: null,
       activeTool: 'blur',
+      blurStrokeShape: 'brush',
       brushRadius: 20,
       zoom: 100,
       blurStrokes: [],
@@ -122,12 +123,13 @@ describe('EditorCanvasRoot split handle and drawing behavior', () => {
     expect(stroke.points.length).toBeGreaterThan(2);
   });
 
-  it('creates a box-shaped blur stroke when shift is held at drag start', () => {
+  it('creates a box-shaped blur stroke when brush mode is active and shift is held at drag start', () => {
     useEditorStore.setState({
       imageWidth: 300,
       imageHeight: 150,
       image2: null,
       activeTool: 'blur',
+      blurStrokeShape: 'brush',
       blurStrokes: [],
       currentStroke: null,
       isDrawing: false,
@@ -164,5 +166,88 @@ describe('EditorCanvasRoot split handle and drawing behavior', () => {
     expect(stroke.points).toHaveLength(2);
     expect(stroke.points[1].x).toBeCloseTo(80);
     expect(stroke.points[1].y).toBeCloseTo(60);
+  });
+
+  it('creates a box-shaped blur stroke without shift when area mode is selected', () => {
+    useEditorStore.setState({
+      imageWidth: 300,
+      imageHeight: 150,
+      image2: null,
+      activeTool: 'blur',
+      blurStrokeShape: 'box',
+      blurStrokes: [],
+      currentStroke: null,
+      isDrawing: false,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas).toBeInTheDocument();
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+
+    fireEvent.pointerDown(backgroundContainer, {
+      button: 0,
+      pointerId: 411,
+      clientX: 24,
+      clientY: 28,
+    });
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 411,
+      clientX: 88,
+      clientY: 66,
+    });
+    fireEvent.pointerUp(backgroundContainer, {
+      pointerId: 411,
+      clientX: 88,
+      clientY: 66,
+    });
+
+    const stroke = useEditorStore.getState().blurStrokes[0];
+    expect(stroke.shape).toBe('box');
+    expect(stroke.points).toHaveLength(2);
+  });
+
+  it('temporarily switches area mode to brush when shift is held', () => {
+    useEditorStore.setState({
+      imageWidth: 300,
+      imageHeight: 150,
+      image2: null,
+      activeTool: 'blur',
+      blurStrokeShape: 'box',
+      blurStrokes: [],
+      currentStroke: null,
+      isDrawing: false,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas).toBeInTheDocument();
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+
+    fireEvent.pointerDown(backgroundContainer, {
+      button: 0,
+      pointerId: 412,
+      clientX: 30,
+      clientY: 30,
+      shiftKey: true,
+    });
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 412,
+      clientX: 95,
+      clientY: 70,
+      shiftKey: true,
+    });
+    fireEvent.pointerUp(backgroundContainer, {
+      pointerId: 412,
+      clientX: 95,
+      clientY: 70,
+      shiftKey: true,
+    });
+
+    const stroke = useEditorStore.getState().blurStrokes[0];
+    expect(stroke.shape ?? 'brush').toBe('brush');
+    expect(stroke.points.length).toBeGreaterThan(1);
   });
 });

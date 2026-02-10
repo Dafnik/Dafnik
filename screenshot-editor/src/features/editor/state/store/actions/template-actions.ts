@@ -12,8 +12,8 @@ export function createTemplateActions({
   get,
 }: StoreContext): Pick<
   EditorStoreActions,
-  | 'toggleTemplatePanel'
-  | 'setTemplatePanelOpen'
+  | 'toggleSplitViewSidebar'
+  | 'setSplitViewSidebarOpen'
   | 'setSelectedTemplate'
   | 'createBlurTemplate'
   | 'updateBlurTemplate'
@@ -22,20 +22,10 @@ export function createTemplateActions({
   | 'loadBlurTemplate'
 > {
   return {
-    toggleTemplatePanel: () =>
-      set((state) => {
-        const showTemplatePanel = !state.showTemplatePanel;
-        return {
-          showTemplatePanel,
-          showBlurOutlines: showTemplatePanel,
-        };
-      }),
+    toggleSplitViewSidebar: () =>
+      set((state) => ({showSplitViewSidebar: !state.showSplitViewSidebar})),
 
-    setTemplatePanelOpen: (showTemplatePanel) =>
-      set({
-        showTemplatePanel,
-        showBlurOutlines: showTemplatePanel,
-      }),
+    setSplitViewSidebarOpen: (showSplitViewSidebar) => set({showSplitViewSidebar}),
 
     setSelectedTemplate: (selectedTemplateId) => set({selectedTemplateId}),
 

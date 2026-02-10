@@ -54,6 +54,7 @@ describe('EditorCanvasRoot overlays and cursor behavior', () => {
   it('changes cursor and hides radius preview while shift is held in blur tool', () => {
     useEditorStore.setState({
       activeTool: 'blur',
+      blurStrokeShape: 'brush',
       isShiftPressed: true,
       imageWidth: 300,
       imageHeight: 150,
@@ -82,6 +83,7 @@ describe('EditorCanvasRoot overlays and cursor behavior', () => {
   it('shows radius preview in blur tool when shift is not held', async () => {
     useEditorStore.setState({
       activeTool: 'blur',
+      blurStrokeShape: 'brush',
       isShiftPressed: false,
       imageWidth: 300,
       imageHeight: 150,
@@ -102,6 +104,66 @@ describe('EditorCanvasRoot overlays and cursor behavior', () => {
       clientX: 50,
       clientY: 50,
       shiftKey: false,
+    });
+
+    await waitFor(() =>
+      expect(container.querySelector('[data-testid="brush-radius-preview"]')).toBeInTheDocument(),
+    );
+  });
+
+  it('uses area cursor and hides radius preview when area mode is selected', () => {
+    useEditorStore.setState({
+      activeTool: 'blur',
+      blurStrokeShape: 'box',
+      isShiftPressed: false,
+      imageWidth: 300,
+      imageHeight: 150,
+      brushRadius: 20,
+      showBlurOutlines: false,
+      blurStrokes: [],
+      currentStroke: null,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+    expect(backgroundContainer.style.cursor).toBe('cell');
+
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 902,
+      clientX: 50,
+      clientY: 50,
+      shiftKey: false,
+    });
+
+    expect(container.querySelector('[data-testid="brush-radius-preview"]')).toBeNull();
+  });
+
+  it('temporarily switches area mode to brush cursor and preview while shift is held', async () => {
+    useEditorStore.setState({
+      activeTool: 'blur',
+      blurStrokeShape: 'box',
+      isShiftPressed: true,
+      imageWidth: 300,
+      imageHeight: 150,
+      brushRadius: 20,
+      showBlurOutlines: false,
+      blurStrokes: [],
+      currentStroke: null,
+    });
+
+    const {container} = render(<EditorCanvasRoot />);
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    mockCanvasRect(canvas);
+    const backgroundContainer = container.firstElementChild as HTMLElement;
+    expect(backgroundContainer.style.cursor).toBe('crosshair');
+
+    fireEvent.pointerMove(backgroundContainer, {
+      pointerId: 903,
+      clientX: 58,
+      clientY: 58,
+      shiftKey: true,
     });
 
     await waitFor(() =>

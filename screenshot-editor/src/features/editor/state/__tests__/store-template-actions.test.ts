@@ -169,18 +169,18 @@ describe('store template actions', () => {
     expect(store.getState().history.length).toBe(historyBefore + 1);
   });
 
-  it('syncs outlines visibility with template panel open state', () => {
+  it('toggles split-view sidebar visibility without mutating outlines visibility', () => {
     const store = useEditorStore;
 
-    store.setState({showTemplatePanel: false, showBlurOutlines: false});
-    store.getState().toggleTemplatePanel();
+    store.setState({showSplitViewSidebar: false, showBlurOutlines: false});
+    store.getState().toggleSplitViewSidebar();
 
-    expect(store.getState().showTemplatePanel).toBe(true);
-    expect(store.getState().showBlurOutlines).toBe(true);
+    expect(store.getState().showSplitViewSidebar).toBe(true);
+    expect(store.getState().showBlurOutlines).toBe(false);
 
-    store.getState().setTemplatePanelOpen(false);
+    store.getState().setSplitViewSidebarOpen(false);
 
-    expect(store.getState().showTemplatePanel).toBe(false);
+    expect(store.getState().showSplitViewSidebar).toBe(false);
     expect(store.getState().showBlurOutlines).toBe(false);
   });
 });

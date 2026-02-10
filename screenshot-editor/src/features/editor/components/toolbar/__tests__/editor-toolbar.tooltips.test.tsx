@@ -86,4 +86,21 @@ describe('EditorToolbar shortcut tooltips', () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it('toggles split-view sidebar from toolbar button and updates button variant', async () => {
+    const user = userEvent.setup();
+    useEditorStore.setState({showSplitViewSidebar: false});
+    renderEditorLayout();
+
+    const splitViewButton = screen.getByRole('button', {name: 'Split View'});
+    expect(splitViewButton).toHaveClass('bg-transparent');
+
+    await user.click(splitViewButton);
+    expect(useEditorStore.getState().showSplitViewSidebar).toBe(true);
+    expect(splitViewButton).toHaveClass('bg-primary');
+
+    await user.click(splitViewButton);
+    expect(useEditorStore.getState().showSplitViewSidebar).toBe(false);
+    expect(splitViewButton).toHaveClass('bg-transparent');
+  });
 });

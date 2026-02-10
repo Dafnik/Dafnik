@@ -44,6 +44,7 @@ describe('editor persistence helpers', () => {
     const persisted = getPersistedSettingsSlice({
       splitRatio: 55,
       splitDirection: 'vertical',
+      blurStrokeShape: 'brush',
       brushRadius: 20,
       brushStrength: 9,
       blurType: 'normal',
@@ -55,6 +56,7 @@ describe('editor persistence helpers', () => {
     expect(persisted).toEqual({
       splitRatio: 55,
       splitDirection: 'vertical',
+      blurStrokeShape: 'brush',
       brushRadius: 20,
       brushStrength: 9,
       blurType: 'normal',

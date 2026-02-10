@@ -16,7 +16,7 @@ vi.mock('@/features/editor/services/email-detection', () => ({
 function renderSidebar(selectedStrokeIndices: number[] = []) {
   return render(
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-      <EditorSidebar onAddSecondImage={() => {}} selectedStrokeIndices={selectedStrokeIndices} />
+      <EditorSidebar selectedStrokeIndices={selectedStrokeIndices} />
     </TooltipProvider>,
   );
 }
@@ -108,20 +108,67 @@ describe('EditorSidebar blur settings behavior', () => {
     expect(outlinesToggle).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('disables radius input while holding shift in blur tool', () => {
+  it('disables radius input in area mode and temporarily enables it with shift', () => {
     useEditorStore.setState({
       activeTool: 'blur',
-      isShiftPressed: true,
+      blurStrokeShape: 'box',
+      isShiftPressed: false,
       brushRadius: 24,
       brushStrength: 10,
       blurType: 'normal',
     });
 
+    const firstRender = renderSidebar([]);
+
+    const areaButton = screen.getByRole('button', {name: /area/i});
+    const brushButton = screen.getByRole('button', {name: /brush/i});
+    expect(areaButton).toHaveClass('bg-primary');
+    expect(brushButton).not.toHaveClass('bg-primary');
+
+    const [, radiusSliderWhenShiftOff] = screen.getAllByRole('slider');
+    fireEvent.keyDown(radiusSliderWhenShiftOff, {key: 'ArrowRight'});
+    expect(useEditorStore.getState().brushRadius).toBe(24);
+
+    firstRender.unmount();
+    useEditorStore.setState({isShiftPressed: true});
+    const secondRender = renderSidebar([]);
+
+    expect(screen.getByRole('button', {name: /brush/i})).toHaveClass('bg-primary');
+    expect(screen.getByRole('button', {name: /area/i})).not.toHaveClass('bg-primary');
+
+    const [, radiusSliderWhenShiftOn] = screen.getAllByRole('slider');
+    fireEvent.keyDown(radiusSliderWhenShiftOn, {key: 'ArrowRight'});
+    expect(useEditorStore.getState().brushRadius).toBe(25);
+
+    secondRender.unmount();
+    useEditorStore.setState({isShiftPressed: false});
     renderSidebar([]);
 
-    const [, radiusSlider] = screen.getAllByRole('slider');
-    fireEvent.keyDown(radiusSlider, {key: 'ArrowRight'});
-    expect(useEditorStore.getState().brushRadius).toBe(24);
+    expect(screen.getByRole('button', {name: /area/i})).toHaveClass('bg-primary');
+    expect(screen.getByRole('button', {name: /brush/i})).not.toHaveClass('bg-primary');
+  });
+
+  it('switches blur stroke mode with brush and area buttons', async () => {
+    const user = userEvent.setup();
+    useEditorStore.setState({
+      activeTool: 'blur',
+      blurStrokeShape: 'brush',
+      isShiftPressed: false,
+    });
+
+    renderSidebar([]);
+
+    const brushButton = screen.getByRole('button', {name: /^brush$/i});
+    const areaButton = screen.getByRole('button', {name: /^area$/i});
+    expect(brushButton).toHaveClass('bg-primary');
+
+    await user.click(areaButton);
+    expect(useEditorStore.getState().blurStrokeShape).toBe('box');
+    expect(areaButton).toHaveClass('bg-primary');
+
+    await user.click(brushButton);
+    expect(useEditorStore.getState().blurStrokeShape).toBe('brush');
+    expect(brushButton).toHaveClass('bg-primary');
   });
 
   it('prefills from a single selected stroke and edits only selected stroke values', async () => {
@@ -311,10 +358,10 @@ describe('EditorSidebar blur settings behavior', () => {
       .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
     useEditorStore.setState({activeTool: 'blur'});
 
-    let resolveDetection: ((value: unknown) => void) | null = null;
+    let resolveDetection: (() => void) | undefined;
     detectEmailsInImageMock.mockReturnValueOnce(
       new Promise((resolve) => {
-        resolveDetection = resolve;
+        resolveDetection = () => resolve([]);
       }),
     );
 
@@ -324,7 +371,10 @@ describe('EditorSidebar blur settings behavior', () => {
     await user.click(button);
     expect(button).toBeDisabled();
 
-    resolveDetection?.([]);
+    if (!resolveDetection) {
+      throw new Error('resolveDetection was not assigned.');
+    }
+    resolveDetection();
     await waitFor(() => {
       expect(button).not.toBeDisabled();
     });

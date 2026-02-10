@@ -164,11 +164,10 @@ describe('useEditorShortcuts', () => {
     expect(useEditorStore.getState().showShortcutsModal).toBe(false);
   });
 
-  it('loads ordered template slot and opens template panel with Ctrl+2', () => {
+  it('loads ordered template slot with Ctrl+2', () => {
     useEditorStore.setState({
       imageWidth: 100,
       imageHeight: 100,
-      showTemplatePanel: false,
       blurStrokes: [],
       blurTemplates: [
         makeTemplate('template-1', 'Faces', {xRatio: 0.1, yRatio: 0.1}),
@@ -180,7 +179,6 @@ describe('useEditorShortcuts', () => {
     fireEvent.keyDown(window, {key: '2', code: 'Digit2', ctrlKey: true});
 
     const state = useEditorStore.getState();
-    expect(state.showTemplatePanel).toBe(true);
     expect(state.selectedTemplateId).toBe('template-2');
     expect(state.blurStrokes[0].points[0].x).toBeCloseTo(80);
     expect(state.blurStrokes[0].points[0].y).toBeCloseTo(60);
@@ -206,7 +204,6 @@ describe('useEditorShortcuts', () => {
 
   it('treats missing Ctrl+9 template slot as no-op while preventing default', () => {
     useEditorStore.setState({
-      showTemplatePanel: false,
       selectedTemplateId: null,
       blurStrokes: [],
       blurTemplates: [makeTemplate('template-1', 'Faces', {xRatio: 0.1, yRatio: 0.1})],
@@ -222,7 +219,6 @@ describe('useEditorShortcuts', () => {
     window.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(true);
-    expect(useEditorStore.getState().showTemplatePanel).toBe(false);
     expect(useEditorStore.getState().selectedTemplateId).toBeNull();
     expect(useEditorStore.getState().blurStrokes).toHaveLength(0);
   });
@@ -301,7 +297,7 @@ describe('useEditorShortcuts', () => {
     expect(state.blurType).toBe('normal');
   });
 
-  it('copies and pastes all selected blur boxes, offsetting by 15px and selecting pasted boxes', () => {
+  it('copies and pastes all selected blur boxes, offsetting by 45px and selecting pasted boxes', () => {
     useEditorStore.getState().initializeEditor({
       image1: 'img-1',
       image2: null,
@@ -324,8 +320,8 @@ describe('useEditorShortcuts', () => {
 
     const state = useEditorStore.getState();
     expect(state.blurStrokes).toHaveLength(4);
-    expect(state.blurStrokes[2]).toMatchObject(makeBlurBoxStroke(35, 35, 55, 55, 'normal'));
-    expect(state.blurStrokes[3]).toMatchObject(makeBlurBoxStroke(95, 65, 115, 85, 'pixelated'));
+    expect(state.blurStrokes[2]).toMatchObject(makeBlurBoxStroke(65, 65, 85, 85, 'normal'));
+    expect(state.blurStrokes[3]).toMatchObject(makeBlurBoxStroke(125, 95, 145, 115, 'pixelated'));
     expect(state.selectedStrokeIndices).toEqual([2, 3]);
     expect(state.history.length).toBe(historyBefore + 1);
   });
@@ -350,8 +346,8 @@ describe('useEditorShortcuts', () => {
 
     const state = useEditorStore.getState();
     expect(state.blurStrokes).toHaveLength(3);
-    expect(state.blurStrokes[1]).toMatchObject(makeBlurBoxStroke(35, 35, 55, 55, 'normal'));
-    expect(state.blurStrokes[2]).toMatchObject(makeBlurBoxStroke(50, 50, 70, 70, 'normal'));
+    expect(state.blurStrokes[1]).toMatchObject(makeBlurBoxStroke(65, 65, 85, 85, 'normal'));
+    expect(state.blurStrokes[2]).toMatchObject(makeBlurBoxStroke(110, 110, 130, 130, 'normal'));
     expect(state.selectedStrokeIndices).toEqual([2]);
   });
 

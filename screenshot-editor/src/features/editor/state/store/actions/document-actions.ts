@@ -50,7 +50,7 @@ export function createDocumentActions({
         selectorFirstImage: null,
         selectorSecondImage: null,
         lightSelectorState: 'idle',
-        showTemplatePanel: false,
+        showSplitViewSidebar: Boolean(image2),
         selectedTemplateId: null,
         selectedStrokeIndices: [],
         isShiftPressed: false,
@@ -77,7 +77,7 @@ export function createDocumentActions({
         selectorFirstImage: null,
         selectorSecondImage: null,
         lightSelectorState: 'idle',
-        showTemplatePanel: false,
+        showSplitViewSidebar: false,
         selectedTemplateId: null,
         selectedStrokeIndices: [],
         showBlurOutlines: false,
@@ -95,6 +95,7 @@ export function createDocumentActions({
         brushRadius: DEFAULT_SETTINGS.brushRadius,
         brushStrength: DEFAULT_SETTINGS.brushStrength,
         blurType: DEFAULT_SETTINGS.blurType,
+        blurStrokeShape: DEFAULT_SETTINGS.blurStrokeShape,
         activeTool: DEFAULT_SETTINGS.activeTool,
         isShiftPressed: false,
         lightImageSide: DEFAULT_SETTINGS.lightImageSide,
@@ -141,7 +142,7 @@ export function createDocumentActions({
     },
 
     addSecondImage: (image) => {
-      set({image2: image});
+      set({image2: image, showSplitViewSidebar: true});
       get().pushHistorySnapshot();
     },
 

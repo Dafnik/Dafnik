@@ -8,7 +8,7 @@ import {
   Plus,
   Redo2,
   Settings2,
-  SquareLibrary,
+  SplitSquareVertical,
   Undo2,
 } from 'lucide-react';
 import {Button} from '@/components/ui/button';
@@ -35,10 +35,10 @@ export function EditorToolbar() {
   const zoom = useEditorStore((state) => state.zoom);
   const canUndo = useEditorStore((state) => state.canUndo);
   const canRedo = useEditorStore((state) => state.canRedo);
-  const showTemplatePanel = useEditorStore((state) => state.showTemplatePanel);
+  const showSplitViewSidebar = useEditorStore((state) => state.showSplitViewSidebar);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
-  const toggleTemplatePanel = useEditorStore((state) => state.toggleTemplatePanel);
+  const toggleSplitViewSidebar = useEditorStore((state) => state.toggleSplitViewSidebar);
   const setZoom = useEditorStore((state) => state.setZoom);
   const setPan = useEditorStore((state) => state.setPan);
   const openExportModal = useEditorStore((state) => state.openExportModal);
@@ -194,12 +194,12 @@ export function EditorToolbar() {
           </span>
         </ShortcutTooltip>
         <Button
-          variant={showTemplatePanel ? 'default' : 'ghost'}
+          variant={showSplitViewSidebar ? 'default' : 'ghost'}
           size="sm"
           className="h-7 gap-1.5 px-2.5 text-xs"
-          onClick={toggleTemplatePanel}>
-          <SquareLibrary className="h-3.5 w-3.5" />
-          Template
+          onClick={toggleSplitViewSidebar}>
+          <SplitSquareVertical className="h-3.5 w-3.5" />
+          Split View
         </Button>
         <div className="bg-border mx-1 h-6 w-0.5" />
         <ShortcutTooltip content={exportTooltip}>

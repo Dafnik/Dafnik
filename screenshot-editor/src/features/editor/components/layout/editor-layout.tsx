@@ -4,10 +4,9 @@ import {EditorCanvasRoot} from '@/features/editor/components/canvas/editor-canva
 import {ExportModal} from '@/features/editor/components/modals/export-modal';
 import {LightImageSelectorModal} from '@/features/editor/components/modals/light-image-selector-modal';
 import {ShortcutsModal} from '@/features/editor/components/modals/shortcuts-modal';
-import {BlurTemplatePanel} from '@/features/editor/components/sidebar/blur-template-panel';
 import {EditorSidebar} from '@/features/editor/components/sidebar/editor-sidebar';
+import {SplitViewSidebar} from '@/features/editor/components/sidebar/split-view-sidebar';
 import {EditorToolbar} from '@/features/editor/components/toolbar/editor-toolbar';
-import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface EditorLayoutProps {
   onAddSecondImage: (dataUrl: string, fileName: string | null) => void;
@@ -24,7 +23,6 @@ export function EditorLayout({
 }: EditorLayoutProps) {
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
   const [selectedStrokeIndices, setSelectedStrokeIndices] = useState<number[]>([]);
-  const showTemplatePanel = useEditorStore((state) => state.showTemplatePanel);
 
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
@@ -32,15 +30,12 @@ export function EditorLayout({
         <EditorToolbar />
 
         <div className="flex flex-1 overflow-hidden">
-          <EditorSidebar
-            onAddSecondImage={onAddSecondImage}
-            selectedStrokeIndices={selectedStrokeIndices}
-          />
+          <EditorSidebar selectedStrokeIndices={selectedStrokeIndices} />
           <EditorCanvasRoot
             onCanvasReady={setCanvasEl}
             onSelectedStrokeIndicesChange={setSelectedStrokeIndices}
           />
-          {showTemplatePanel && <BlurTemplatePanel />}
+          <SplitViewSidebar onAddSecondImage={onAddSecondImage} />
         </div>
 
         <ExportModal canvasRef={canvasEl} />

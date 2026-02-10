@@ -47,7 +47,7 @@ export function ToolSection({activeTool, switchToolTooltip, onSetActiveTool}: To
               : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
           }`}>
           <Droplets className="h-3.5 w-3.5" />
-          Blur Brush
+          Blur
         </button>
       </div>
     </div>

@@ -18,8 +18,8 @@ function renderEditorLayout() {
 describe('EditorSidebar shortcuts', () => {
   it('opens add-second-image file dialog with Ctrl+U when split upload is available', () => {
     useEditorStore.setState({image2: null});
-    const {container} = renderEditorLayout();
-    const fileInput = container.querySelector('aside input[type="file"]') as HTMLInputElement;
+    renderEditorLayout();
+    const fileInput = screen.getByTestId('split-view-upload-input') as HTMLInputElement;
     const clickSpy = vi.spyOn(fileInput, 'click');
 
     fireEvent.keyDown(window, {key: 'u', code: 'KeyU', ctrlKey: true});

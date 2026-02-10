@@ -25,6 +25,7 @@ describe('EditorSidebar shortcut tooltips', () => {
     const {container} = renderEditorLayout();
     const toolGrid = container.querySelector('[data-testid="tool-grid"]');
     expect(toolGrid).toHaveClass('grid', 'grid-cols-2');
+    expect(screen.getByRole('button', {name: 'Blur'})).toBeInTheDocument();
 
     const toolLabel = screen.getByText('Tool');
     await user.hover(toolLabel);
@@ -105,8 +106,25 @@ describe('EditorSidebar shortcut tooltips', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows mode tooltip on mode label', async () => {
+    useEditorStore.setState({activeTool: 'blur'});
+    const user = userEvent.setup();
+    renderEditorLayout();
+
+    const modeLabel = screen.getByText('Mode');
+    await user.hover(modeLabel);
+
+    expect(
+      await screen.findByRole('tooltip', {name: 'Hold Shift to temporarily switch modes'}),
+    ).toBeInTheDocument();
+  });
+
   it('shows split direction tooltip and removes native title on direction buttons', async () => {
-    useEditorStore.setState({image2: 'data:image/png;base64,xyz', splitDirection: 'vertical'});
+    useEditorStore.setState({
+      image2: 'data:image/png;base64,xyz',
+      splitDirection: 'vertical',
+      showSplitViewSidebar: true,
+    });
     const user = userEvent.setup();
     renderEditorLayout();
 
@@ -123,7 +141,7 @@ describe('EditorSidebar shortcut tooltips', () => {
   });
 
   it('shows placement tooltip on split placement controls', async () => {
-    useEditorStore.setState({image2: 'data:image/png;base64,xyz'});
+    useEditorStore.setState({image2: 'data:image/png;base64,xyz', showSplitViewSidebar: true});
     const user = userEvent.setup();
     renderEditorLayout();
 

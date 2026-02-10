@@ -11,7 +11,6 @@ export function BlurTemplatePanel() {
   const selectedTemplateId = useEditorStore((state) => state.selectedTemplateId);
   const blurStrokes = useEditorStore((state) => state.blurStrokes);
 
-  const setTemplatePanelOpen = useEditorStore((state) => state.setTemplatePanelOpen);
   const setSelectedTemplate = useEditorStore((state) => state.setSelectedTemplate);
   const createBlurTemplate = useEditorStore((state) => state.createBlurTemplate);
   const updateBlurTemplate = useEditorStore((state) => state.updateBlurTemplate);
@@ -219,18 +218,9 @@ export function BlurTemplatePanel() {
   };
 
   return (
-    <aside
-      className="border-border flex h-full w-64 flex-shrink-0 flex-col overflow-y-auto border-l-2"
-      style={{background: 'oklch(var(--sidebar-background))'}}>
+    <div className="border-border border-b-2">
       <div className="border-border flex items-center justify-between border-b-2 p-4">
         <h3 className="text-foreground text-sm font-semibold">Blur Templates</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs"
-          onClick={() => setTemplatePanelOpen(false)}>
-          Close
-        </Button>
       </div>
 
       <div className="border-border border-b-2 p-4">
@@ -389,6 +379,6 @@ export function BlurTemplatePanel() {
           </div>
         )}
       </div>
-    </aside>
+    </div>
   );
 }

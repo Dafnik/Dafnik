@@ -63,6 +63,7 @@ export interface DocumentSlice {
 export interface ToolSlice {
   activeTool: ActiveTool;
   blurType: BlurType;
+  blurStrokeShape: BlurStrokeShape;
   brushRadius: number;
   brushStrength: number;
   isShiftPressed: boolean;
@@ -92,7 +93,7 @@ export interface UiSlice {
   selectorFirstImage: string | null;
   selectorSecondImage: string | null;
   lightSelectorState: LightSelectorState;
-  showTemplatePanel: boolean;
+  showSplitViewSidebar: boolean;
   selectedTemplateId: string | null;
   blurTemplates: BlurTemplate[];
   selectedStrokeIndices: number[];
@@ -108,6 +109,7 @@ export interface HistorySlice {
 export interface PersistedSettings {
   splitRatio: number;
   splitDirection: SplitDirection;
+  blurStrokeShape: BlurStrokeShape;
   brushRadius: number;
   brushStrength: number;
   blurType: BlurType;
@@ -171,6 +173,7 @@ export interface EditorStoreActions {
   setBrushRadius: (value: number) => void;
   setBrushStrength: (value: number) => void;
   setBlurType: (type: BlurType) => void;
+  setBlurStrokeShape: (shape: BlurStrokeShape) => void;
   setSplitDirection: (
     direction: SplitDirection,
     options?: Partial<SetSplitDirectionOptions>,
@@ -196,8 +199,8 @@ export interface EditorStoreActions {
   cancelStroke: () => void;
   clearBlurStrokes: () => void;
   setShowBlurOutlines: (enabled: boolean) => void;
-  toggleTemplatePanel: () => void;
-  setTemplatePanelOpen: (open: boolean) => void;
+  toggleSplitViewSidebar: () => void;
+  setSplitViewSidebarOpen: (open: boolean) => void;
   setSelectedStrokeIndices: (indices: number[]) => void;
   setSelectedTemplate: (templateId: string | null) => void;
   createBlurTemplate: (name: string) => ActionResult;
@@ -231,6 +234,7 @@ export type EditorStoreState = DocumentSlice &
 export const DEFAULT_SETTINGS: PersistedSettings = {
   splitRatio: 50,
   splitDirection: 'vertical',
+  blurStrokeShape: 'brush',
   brushRadius: 20,
   brushStrength: 10,
   blurType: 'normal',

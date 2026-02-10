@@ -224,7 +224,11 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         return;
       }
 
-      const blurShape = event.shiftKey ? 'box' : 'brush';
+      const blurShape = event.shiftKey
+        ? store.blurStrokeShape === 'brush'
+          ? 'box'
+          : 'brush'
+        : store.blurStrokeShape;
       store.startStroke(coords.x, coords.y, {shape: blurShape});
       startStrokeSampling(coords, blurShape);
     },

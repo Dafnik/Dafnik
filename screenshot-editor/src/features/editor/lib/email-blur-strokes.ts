@@ -32,27 +32,29 @@ export function createEmailBlurStrokes({
 }: CreateEmailBlurStrokesOptions): BlurStroke[] {
   if (imageWidth <= 0 || imageHeight <= 0) return [];
 
-  return boxes
-    .map((box) => {
-      if (box.width <= 0 || box.height <= 0) return null;
+  const strokes: BlurStroke[] = [];
 
-      const startX = clamp(box.x - paddingPx, 0, imageWidth);
-      const startY = clamp(box.y - paddingPx, 0, imageHeight);
-      const endX = clamp(box.x + box.width + paddingPx, 0, imageWidth);
-      const endY = clamp(box.y + box.height + paddingPx, 0, imageHeight);
+  for (const box of boxes) {
+    if (box.width <= 0 || box.height <= 0) continue;
 
-      if (endX <= startX || endY <= startY) return null;
+    const startX = clamp(box.x - paddingPx, 0, imageWidth);
+    const startY = clamp(box.y - paddingPx, 0, imageHeight);
+    const endX = clamp(box.x + box.width + paddingPx, 0, imageWidth);
+    const endY = clamp(box.y + box.height + paddingPx, 0, imageHeight);
 
-      return {
-        points: [
-          {x: startX, y: startY},
-          {x: endX, y: endY},
-        ],
-        radius,
-        strength,
-        blurType,
-        shape: 'box' as const,
-      } satisfies BlurStroke;
-    })
-    .filter((stroke): stroke is BlurStroke => stroke !== null);
+    if (endX <= startX || endY <= startY) continue;
+
+    strokes.push({
+      points: [
+        {x: startX, y: startY},
+        {x: endX, y: endY},
+      ],
+      radius,
+      strength,
+      blurType,
+      shape: 'box',
+    });
+  }
+
+  return strokes;
 }

@@ -142,7 +142,11 @@ export function EditorRoot() {
           state.lightImageSide,
         );
 
-        editorStoreApi.setState({image1: ordered.image1, image2: ordered.image2});
+        editorStoreApi.setState({
+          image1: ordered.image1,
+          image2: ordered.image2,
+          showSplitViewSidebar: true,
+        });
         const derivedExportName = deriveSplitExportName(
           primaryUploadBaseNameRef.current ?? state.exportBaseName,
           fileName,

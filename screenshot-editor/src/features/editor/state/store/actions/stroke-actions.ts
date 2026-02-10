@@ -11,6 +11,7 @@ export function createStrokeActions({
   | 'setBrushRadius'
   | 'setBrushStrength'
   | 'setBlurType'
+  | 'setBlurStrokeShape'
   | 'setZoom'
   | 'setPan'
   | 'updateBlurStrokesAtIndices'
@@ -31,6 +32,7 @@ export function createStrokeActions({
     setBrushRadius: (brushRadius) => set({brushRadius}),
     setBrushStrength: (brushStrength) => set({brushStrength}),
     setBlurType: (blurType) => set({blurType}),
+    setBlurStrokeShape: (blurStrokeShape) => set({blurStrokeShape}),
     setZoom: (value) => set({zoom: Math.max(10, Math.min(500, value))}),
     setPan: (panX, panY) => set({panX, panY}),
 
