@@ -3,14 +3,20 @@ import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {TooltipProvider} from '@/components/ui/tooltip';
 import {EditorSidebar} from '@/features/editor/components/sidebar/editor-sidebar';
+import {AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY} from '@/features/editor/state/auto-blur-custom-text-storage';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
-const {detectEmailsInImageMock} = vi.hoisted(() => ({
-  detectEmailsInImageMock: vi.fn(),
-}));
+const {detectEmailsInImageMock, detectPhoneNumbersInImageMock, detectCustomTextInImageMock} =
+  vi.hoisted(() => ({
+    detectEmailsInImageMock: vi.fn(),
+    detectPhoneNumbersInImageMock: vi.fn(),
+    detectCustomTextInImageMock: vi.fn(),
+  }));
 
-vi.mock('@/features/editor/services/email-detection', () => ({
+vi.mock('@/features/editor/services/ocr-text-detection', () => ({
   detectEmailsInImage: detectEmailsInImageMock,
+  detectPhoneNumbersInImage: detectPhoneNumbersInImageMock,
+  detectCustomTextInImage: detectCustomTextInImageMock,
 }));
 
 function renderSidebar(selectedStrokeIndices: number[] = []) {
@@ -21,9 +27,15 @@ function renderSidebar(selectedStrokeIndices: number[] = []) {
   );
 }
 
+async function openAutoBlurMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', {name: /open auto blur menu/i}));
+}
+
 describe('EditorSidebar blur settings behavior', () => {
   beforeEach(() => {
     detectEmailsInImageMock.mockReset();
+    detectPhoneNumbersInImageMock.mockReset();
+    detectCustomTextInImageMock.mockReset();
   });
 
   it('keeps blur section controls active in drag mode while disabling blur inputs', async () => {
@@ -279,6 +291,24 @@ describe('EditorSidebar blur settings behavior', () => {
     expect(state.history.length).toBe(historyBeforeStrength + 1);
   });
 
+  it('opens and closes the auto blur dropdown', async () => {
+    const user = userEvent.setup();
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({activeTool: 'blur'});
+
+    renderSidebar();
+
+    await openAutoBlurMenu(user);
+    expect(screen.getByRole('button', {name: /auto blur email addresses/i})).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+    await waitFor(() => {
+      expect(screen.queryByRole('button', {name: /auto blur email addresses/i})).toBeNull();
+    });
+  });
+
   it('auto-blurs detected emails and appends generated box strokes', async () => {
     const user = userEvent.setup();
     useEditorStore
@@ -299,14 +329,15 @@ describe('EditorSidebar blur settings behavior', () => {
       ],
     });
     detectEmailsInImageMock.mockResolvedValueOnce([
-      {email: 'one@example.com', box: {x: 40, y: 30, width: 80, height: 20}},
-      {email: 'two@example.com', box: {x: 120, y: 80, width: 90, height: 24}},
+      {text: 'one@example.com', box: {x: 40, y: 30, width: 80, height: 20}},
+      {text: 'two@example.com', box: {x: 120, y: 80, width: 90, height: 24}},
     ]);
 
     renderSidebar();
 
     const historyBefore = useEditorStore.getState().history.length;
-    await user.click(screen.getByRole('button', {name: /auto blur detected emails/i}));
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /auto blur email addresses/i}));
 
     await waitFor(() => {
       expect(useEditorStore.getState().blurStrokes).toHaveLength(3);
@@ -334,6 +365,123 @@ describe('EditorSidebar blur settings behavior', () => {
     expect(screen.getByText('Blurred 2 detected emails.')).toBeInTheDocument();
   });
 
+  it('auto-blurs detected phone numbers', async () => {
+    const user = userEvent.setup();
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({
+      activeTool: 'blur',
+      blurType: 'normal',
+      brushStrength: 12,
+      brushRadius: 21,
+      blurStrokes: [],
+    });
+    detectPhoneNumbersInImageMock.mockResolvedValueOnce([
+      {text: '5551234567', box: {x: 50, y: 40, width: 70, height: 18}},
+    ]);
+
+    renderSidebar();
+
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /auto blur phone numbers/i}));
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().blurStrokes).toHaveLength(1);
+    });
+
+    expect(useEditorStore.getState().blurStrokes[0]).toMatchObject({
+      shape: 'box',
+      strength: 12,
+      blurType: 'normal',
+      radius: 21,
+    });
+    expect(screen.getByText('Blurred 1 detected phone number.')).toBeInTheDocument();
+  });
+
+  it('appends only one tight phone blur stroke for a single tight phone match', async () => {
+    const user = userEvent.setup();
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({
+      activeTool: 'blur',
+      blurType: 'normal',
+      brushStrength: 12,
+      brushRadius: 21,
+      blurStrokes: [],
+    });
+    detectPhoneNumbersInImageMock.mockResolvedValueOnce([
+      {text: '5551234567', box: {x: 60, y: 45, width: 82, height: 18}},
+    ]);
+
+    renderSidebar();
+
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /auto blur phone numbers/i}));
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().blurStrokes).toHaveLength(1);
+    });
+
+    const [stroke] = useEditorStore.getState().blurStrokes;
+    expect(stroke.shape).toBe('box');
+    expect(stroke.points).toEqual([
+      {x: 54, y: 39},
+      {x: 148, y: 69},
+    ]);
+  });
+
+  it('runs custom text detection, saves entries, reruns from saved, and deletes entries', async () => {
+    const user = userEvent.setup();
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({activeTool: 'blur'});
+
+    detectCustomTextInImageMock
+      .mockResolvedValueOnce([{text: 'Account #42', box: {x: 30, y: 20, width: 80, height: 20}}])
+      .mockResolvedValueOnce([]);
+
+    renderSidebar();
+
+    await openAutoBlurMenu(user);
+    await user.type(screen.getByPlaceholderText(/enter text/i), 'Account #42');
+    await user.click(screen.getByRole('button', {name: /run auto blur for custom text/i}));
+
+    await waitFor(() => {
+      expect(detectCustomTextInImageMock).toHaveBeenCalledTimes(1);
+    });
+    expect(detectCustomTextInImageMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({query: 'Account #42'}),
+    );
+
+    const savedRaw = localStorage.getItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY);
+    expect(savedRaw).toBeTruthy();
+    expect(JSON.parse(savedRaw ?? '[]')).toEqual(['Account #42']);
+
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /auto blur saved text account #42/i}));
+
+    await waitFor(() => {
+      expect(detectCustomTextInImageMock).toHaveBeenCalledTimes(2);
+    });
+    expect(detectCustomTextInImageMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({query: 'Account #42'}),
+    );
+
+    await screen.findByText('No matches found for "Account #42".');
+
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /delete saved text account #42/i}));
+
+    expect(screen.queryByRole('button', {name: /auto blur saved text account #42/i})).toBeNull();
+    const savedAfterDelete = localStorage.getItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY);
+    expect(JSON.parse(savedAfterDelete ?? '[]')).toEqual([]);
+  });
+
   it('shows no-email status and keeps history unchanged when OCR finds no emails', async () => {
     const user = userEvent.setup();
     useEditorStore
@@ -345,7 +493,8 @@ describe('EditorSidebar blur settings behavior', () => {
     renderSidebar();
 
     const historyBefore = useEditorStore.getState().history.length;
-    await user.click(screen.getByRole('button', {name: /auto blur detected emails/i}));
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /auto blur email addresses/i}));
 
     await screen.findByText('No email addresses detected.');
     expect(useEditorStore.getState().history.length).toBe(historyBefore);
@@ -367,8 +516,9 @@ describe('EditorSidebar blur settings behavior', () => {
 
     renderSidebar();
 
-    const button = screen.getByRole('button', {name: /auto blur detected emails/i});
-    await user.click(button);
+    const button = screen.getByRole('button', {name: /open auto blur menu/i});
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /auto blur email addresses/i}));
     expect(button).toBeDisabled();
 
     if (!resolveDetection) {

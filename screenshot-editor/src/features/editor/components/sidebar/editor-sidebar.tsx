@@ -1,7 +1,16 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createEmailBlurStrokes} from '@/features/editor/lib/email-blur-strokes';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
-import {detectEmailsInImage} from '@/features/editor/services/email-detection';
+import {
+  detectCustomTextInImage,
+  detectEmailsInImage,
+  detectPhoneNumbersInImage,
+  type DetectedTextMatch,
+} from '@/features/editor/services/ocr-text-detection';
+import {
+  loadAutoBlurCustomTexts,
+  saveAutoBlurCustomTexts,
+} from '@/features/editor/state/auto-blur-custom-text-storage';
 import type {BlurType} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {BlurTemplatePanel} from './blur-template-panel';
@@ -13,10 +22,28 @@ interface EditorSidebarProps {
   selectedStrokeIndices: number[];
 }
 
+function normalizeSavedCustomText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function upsertSavedCustomText(existing: string[], nextText: string): string[] {
+  const trimmed = nextText.trim();
+  if (!trimmed) return existing;
+
+  const normalized = normalizeSavedCustomText(trimmed);
+  const alreadyExists = existing.some((entry) => normalizeSavedCustomText(entry) === normalized);
+  if (alreadyExists) return existing;
+
+  return [trimmed, ...existing];
+}
+
 export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   const pendingSelectedStrengthHistoryRef = useRef(false);
-  const [isAutoBlurEmailsPending, setIsAutoBlurEmailsPending] = useState(false);
-  const [autoBlurEmailsStatus, setAutoBlurEmailsStatus] = useState<string | undefined>(undefined);
+  const [isAutoBlurPending, setIsAutoBlurPending] = useState(false);
+  const [autoBlurStatus, setAutoBlurStatus] = useState<string | undefined>(undefined);
+  const [savedAutoBlurCustomTexts, setSavedAutoBlurCustomTexts] = useState<string[]>(() =>
+    loadAutoBlurCustomTexts(),
+  );
 
   const image1 = useEditorStore((state) => state.image1);
   const image2 = useEditorStore((state) => state.image2);
@@ -52,7 +79,7 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   const radiusTooltip = formatShortcutTooltip('Radius +/-', ['radius-step']);
   const strengthTooltip = formatShortcutTooltip('Strength +/-', ['strength-step']);
   const shortcutsTooltip = formatShortcutTooltip('Shortcuts', ['shortcuts-modal']);
-  const autoBlurEmailsTooltip = 'Auto blur emails';
+  const autoBlurTooltip = 'Auto blur text patterns';
 
   const validSelectedStrokeIndices = useMemo(() => {
     const unique = [...new Set(selectedStrokeIndices)];
@@ -80,9 +107,8 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
     : null;
   const displayedBlurType = selectedSourceStroke?.blurType ?? blurType;
   const displayedStrength = selectedSourceStroke?.strength ?? brushStrength;
-  const canAutoBlurEmails = Boolean(image1) && imageWidth > 0 && imageHeight > 0;
-  const autoBlurEmailsDisabled =
-    !canAutoBlurEmails || activeTool !== 'blur' || isAutoBlurEmailsPending;
+  const canAutoBlur = Boolean(image1) && imageWidth > 0 && imageHeight > 0;
+  const autoBlurDisabled = !canAutoBlur || activeTool !== 'blur' || isAutoBlurPending;
 
   const handleBlurTypeChange = useCallback(
     (nextType: BlurType) => {
@@ -159,67 +185,155 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
     ],
   );
 
+  const appendDetectedBlurStrokes = useCallback(
+    (
+      matches: DetectedTextMatch[],
+      noMatchMessage: string,
+      successMessage: (count: number) => string,
+    ) => {
+      if (matches.length === 0) {
+        setAutoBlurStatus(noMatchMessage);
+        return;
+      }
+
+      const nextStrokes = createEmailBlurStrokes({
+        boxes: matches.map((match) => match.box),
+        imageWidth,
+        imageHeight,
+        blurType,
+        strength: brushStrength,
+        radius: brushRadius,
+      });
+
+      if (!appendBlurStrokes(nextStrokes, {commitHistory: true})) {
+        setAutoBlurStatus(noMatchMessage);
+        return;
+      }
+
+      setShowBlurOutlines(true);
+      setAutoBlurStatus(successMessage(matches.length));
+    },
+    [
+      appendBlurStrokes,
+      blurType,
+      brushRadius,
+      brushStrength,
+      imageHeight,
+      imageWidth,
+      setShowBlurOutlines,
+    ],
+  );
+
+  const runAutoBlurDetection = useCallback(
+    (
+      detect: () => Promise<DetectedTextMatch[]>,
+      noMatchMessage: string,
+      successMessage: (count: number) => string,
+    ) => {
+      if (!image1 || imageWidth <= 0 || imageHeight <= 0 || isAutoBlurPending) return;
+
+      setIsAutoBlurPending(true);
+      setAutoBlurStatus(undefined);
+
+      void (async () => {
+        try {
+          const matches = await detect();
+          appendDetectedBlurStrokes(matches, noMatchMessage, successMessage);
+        } catch (error) {
+          const message =
+            error instanceof Error && error.message ? error.message : 'Unknown OCR error.';
+          setAutoBlurStatus(`Automatic detection failed: ${message}`);
+        } finally {
+          setIsAutoBlurPending(false);
+        }
+      })();
+    },
+    [appendDetectedBlurStrokes, image1, imageHeight, imageWidth, isAutoBlurPending],
+  );
+
   const handleAutoBlurEmails = useCallback(() => {
-    if (!image1 || imageWidth <= 0 || imageHeight <= 0 || isAutoBlurEmailsPending) return;
-
-    setIsAutoBlurEmailsPending(true);
-    setAutoBlurEmailsStatus(undefined);
-
-    void (async () => {
-      try {
-        const matches = await detectEmailsInImage({
+    runAutoBlurDetection(
+      () =>
+        detectEmailsInImage({
           image1,
           image2,
           imageWidth,
           imageHeight,
           splitDirection,
           splitRatio,
-        });
+        }),
+      'No email addresses detected.',
+      (count) => `Blurred ${count} detected email${count === 1 ? '' : 's'}.`,
+    );
+  }, [image1, image2, imageHeight, imageWidth, runAutoBlurDetection, splitDirection, splitRatio]);
 
-        if (matches.length === 0) {
-          setAutoBlurEmailsStatus('No email addresses detected.');
-          return;
-        }
-
-        const nextStrokes = createEmailBlurStrokes({
-          boxes: matches.map((match) => match.box),
+  const handleAutoBlurPhoneNumbers = useCallback(() => {
+    runAutoBlurDetection(
+      () =>
+        detectPhoneNumbersInImage({
+          image1,
+          image2,
           imageWidth,
           imageHeight,
-          blurType,
-          strength: brushStrength,
-          radius: brushRadius,
-        });
+          splitDirection,
+          splitRatio,
+        }),
+      'No phone numbers detected.',
+      (count) => `Blurred ${count} detected phone number${count === 1 ? '' : 's'}.`,
+    );
+  }, [image1, image2, imageHeight, imageWidth, runAutoBlurDetection, splitDirection, splitRatio]);
 
-        if (!appendBlurStrokes(nextStrokes, {commitHistory: true})) {
-          setAutoBlurEmailsStatus('No email addresses detected.');
-          return;
-        }
+  const persistCustomText = useCallback((nextText: string) => {
+    setSavedAutoBlurCustomTexts((previous) => {
+      const next = upsertSavedCustomText(previous, nextText);
+      saveAutoBlurCustomTexts(next);
+      return next;
+    });
+  }, []);
 
-        setShowBlurOutlines(true);
-        setAutoBlurEmailsStatus(
-          `Blurred ${matches.length} detected email${matches.length === 1 ? '' : 's'}.`,
-        );
-      } catch (error) {
-        const message =
-          error instanceof Error && error.message ? error.message : 'Unknown OCR error.';
-        setAutoBlurEmailsStatus(`Automatic email detection failed: ${message}`);
-      } finally {
-        setIsAutoBlurEmailsPending(false);
-      }
-    })();
-  }, [
-    appendBlurStrokes,
-    blurType,
-    brushRadius,
-    brushStrength,
-    image1,
-    image2,
-    imageHeight,
-    imageWidth,
-    isAutoBlurEmailsPending,
-    splitDirection,
-    splitRatio,
-  ]);
+  const handleAutoBlurCustomText = useCallback(
+    (query: string) => {
+      const trimmedQuery = query.trim();
+      if (!trimmedQuery) return;
+
+      persistCustomText(trimmedQuery);
+
+      runAutoBlurDetection(
+        () =>
+          detectCustomTextInImage({
+            image1,
+            image2,
+            imageWidth,
+            imageHeight,
+            splitDirection,
+            splitRatio,
+            query: trimmedQuery,
+          }),
+        `No matches found for "${trimmedQuery}".`,
+        (count) => `Blurred ${count} match${count === 1 ? '' : 'es'} for "${trimmedQuery}".`,
+      );
+    },
+    [
+      image1,
+      image2,
+      imageHeight,
+      imageWidth,
+      persistCustomText,
+      runAutoBlurDetection,
+      splitDirection,
+      splitRatio,
+    ],
+  );
+
+  const handleDeleteAutoBlurCustomText = useCallback((text: string) => {
+    const normalized = normalizeSavedCustomText(text);
+
+    setSavedAutoBlurCustomTexts((previous) => {
+      const next = previous.filter((entry) => normalizeSavedCustomText(entry) !== normalized);
+      saveAutoBlurCustomTexts(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!isSelectToolWithSelection) {
@@ -228,7 +342,7 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   }, [isSelectToolWithSelection]);
 
   useEffect(() => {
-    setAutoBlurEmailsStatus(undefined);
+    setAutoBlurStatus(undefined);
   }, [image1, image2, imageHeight, imageWidth, splitDirection, splitRatio]);
 
   return (
@@ -266,10 +380,14 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
         onStrengthCommit={handleStrengthCommit}
         onRadiusChange={setBrushRadius}
         onAutoBlurEmails={handleAutoBlurEmails}
-        isAutoBlurEmailsPending={isAutoBlurEmailsPending}
-        autoBlurEmailsDisabled={autoBlurEmailsDisabled}
-        autoBlurEmailsTooltip={autoBlurEmailsTooltip}
-        autoBlurEmailsStatus={autoBlurEmailsStatus}
+        onAutoBlurPhoneNumbers={handleAutoBlurPhoneNumbers}
+        onAutoBlurCustomText={handleAutoBlurCustomText}
+        onDeleteAutoBlurCustomText={handleDeleteAutoBlurCustomText}
+        savedAutoBlurCustomTexts={savedAutoBlurCustomTexts}
+        isAutoBlurPending={isAutoBlurPending}
+        autoBlurDisabled={autoBlurDisabled}
+        autoBlurTooltip={autoBlurTooltip}
+        autoBlurStatus={autoBlurStatus}
       />
       <BlurTemplatePanel />
 
