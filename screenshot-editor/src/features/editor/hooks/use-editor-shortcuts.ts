@@ -7,9 +7,11 @@ import {
 } from '@/features/editor/lib/blur-box-geometry';
 import {
   getTemplateSlotIndex,
+  isOpenAutoBlurMenuShortcut,
   isArrowLeft,
   isArrowRight,
   isLetterKey,
+  OPEN_AUTO_BLUR_MENU_EVENT,
   isSlashShortcut,
   isTypingElement,
   normalizeKey,
@@ -145,6 +147,12 @@ export function useEditorShortcuts() {
       }
 
       if (!hasModifier || isTyping) return;
+
+      if (isOpenAutoBlurMenuShortcut(event)) {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent(OPEN_AUTO_BLUR_MENU_EVENT));
+        return;
+      }
 
       if (isLetterKey(event, 'c')) {
         const selectedIndices = getValidSelectedStrokeIndices(store);

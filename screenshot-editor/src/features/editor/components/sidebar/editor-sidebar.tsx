@@ -79,7 +79,7 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   const radiusTooltip = formatShortcutTooltip('Radius +/-', ['radius-step']);
   const strengthTooltip = formatShortcutTooltip('Strength +/-', ['strength-step']);
   const shortcutsTooltip = formatShortcutTooltip('Shortcuts', ['shortcuts-modal']);
-  const autoBlurTooltip = 'Auto blur text patterns';
+  const autoBlurTooltip = formatShortcutTooltip('Auto blur text patterns', ['open-auto-blur-menu']);
 
   const validSelectedStrokeIndices = useMemo(() => {
     const unique = [...new Set(selectedStrokeIndices)];

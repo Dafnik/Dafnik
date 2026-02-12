@@ -15,6 +15,7 @@ import {useEffect, useRef, useState} from 'react';
 import {Button} from '@/components/ui/button';
 import {Label} from '@/components/ui/label';
 import {Slider} from '@/components/ui/slider';
+import {OPEN_AUTO_BLUR_MENU_EVENT} from '@/features/editor/lib/keyboard';
 import type {BlurStrokeShape, BlurType} from '@/features/editor/state/types';
 import {ShortcutTooltip} from './shortcut-tooltip';
 
@@ -90,6 +91,19 @@ export function BlurSettingsSection({
   const [isAutoBlurMenuOpen, setIsAutoBlurMenuOpen] = useState(false);
   const [customText, setCustomText] = useState('');
   const autoBlurMenuRef = useRef<HTMLDivElement | null>(null);
+  const customTextInputRef = useRef<HTMLInputElement | null>(null);
+
+  const focusCustomTextInput = () => {
+    window.requestAnimationFrame(() => {
+      customTextInputRef.current?.focus();
+    });
+  };
+
+  const openAutoBlurMenuAndFocus = () => {
+    if (autoBlurDisabled) return;
+    setIsAutoBlurMenuOpen(true);
+    focusCustomTextInput();
+  };
 
   useEffect(() => {
     if (!isAutoBlurMenuOpen) return;
@@ -113,6 +127,15 @@ export function BlurSettingsSection({
       window.removeEventListener('keydown', handleEscape);
     };
   }, [isAutoBlurMenuOpen]);
+
+  useEffect(() => {
+    const handleOpenAutoBlurMenu = () => {
+      openAutoBlurMenuAndFocus();
+    };
+
+    window.addEventListener(OPEN_AUTO_BLUR_MENU_EVENT, handleOpenAutoBlurMenu);
+    return () => window.removeEventListener(OPEN_AUTO_BLUR_MENU_EVENT, handleOpenAutoBlurMenu);
+  }, [autoBlurDisabled]);
 
   const handleAutoBlurEmails = () => {
     setIsAutoBlurMenuOpen(false);
@@ -163,7 +186,15 @@ export function BlurSettingsSection({
                 aria-label="Open auto blur menu"
                 aria-expanded={isAutoBlurMenuOpen}
                 aria-haspopup="menu"
-                onClick={() => setIsAutoBlurMenuOpen((value) => !value)}
+                onClick={() =>
+                  setIsAutoBlurMenuOpen((value) => {
+                    const nextValue = !value;
+                    if (nextValue) {
+                      focusCustomTextInput();
+                    }
+                    return nextValue;
+                  })
+                }
                 disabled={autoBlurDisabled}
                 className="h-7 w-7">
                 {isAutoBlurPending ? (
@@ -209,6 +240,7 @@ export function BlurSettingsSection({
                   </Label>
                   <div className="flex gap-1">
                     <input
+                      ref={customTextInputRef}
                       type="text"
                       value={customText}
                       onChange={(event) => setCustomText(event.target.value)}

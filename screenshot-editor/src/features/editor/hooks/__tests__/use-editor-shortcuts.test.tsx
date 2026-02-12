@@ -1,6 +1,7 @@
 import {fireEvent, render} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import {useEditorShortcuts} from '@/features/editor/hooks/use-editor-shortcuts';
+import {OPEN_AUTO_BLUR_MENU_EVENT} from '@/features/editor/lib/keyboard';
 import type {BlurStroke, BlurTemplate} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
@@ -58,6 +59,17 @@ describe('useEditorShortcuts', () => {
     expect(useEditorStore.getState().showBlurOutlines).toBe(false);
     fireEvent.keyDown(window, {key: 'o', ctrlKey: true});
     expect(useEditorStore.getState().showBlurOutlines).toBe(true);
+  });
+
+  it('opens auto blur menu with Ctrl+A', () => {
+    render(<ShortcutsHarness />);
+    const handler = vi.fn();
+    window.addEventListener(OPEN_AUTO_BLUR_MENU_EVENT, handler);
+
+    fireEvent.keyDown(window, {key: 'a', ctrlKey: true});
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    window.removeEventListener(OPEN_AUTO_BLUR_MENU_EVENT, handler);
   });
 
   it('cycles split direction with Ctrl+D', () => {

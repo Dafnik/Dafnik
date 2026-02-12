@@ -89,7 +89,9 @@ describe('EditorSidebar shortcut tooltips', () => {
     await user.hover(autoBlurButton);
 
     expect(
-      await screen.findByRole('tooltip', {name: 'Auto blur text patterns'}),
+      await screen.findByRole('tooltip', {
+        name: formatShortcutTooltip('Auto blur text patterns', ['open-auto-blur-menu']),
+      }),
     ).toBeInTheDocument();
   });
 

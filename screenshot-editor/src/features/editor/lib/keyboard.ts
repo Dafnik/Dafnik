@@ -61,3 +61,11 @@ export function isOpenUploadShortcut(event: KeyboardEvent): boolean {
     (event.ctrlKey || event.metaKey) && (normalizeKey(event.key) === 'u' || event.code === 'KeyU')
   );
 }
+
+export const OPEN_AUTO_BLUR_MENU_EVENT = 'editor:auto-blur-menu-open';
+
+export function isOpenAutoBlurMenuShortcut(event: KeyboardEvent): boolean {
+  return (
+    (event.ctrlKey || event.metaKey) && (normalizeKey(event.key) === 'a' || event.code === 'KeyA')
+  );
+}

@@ -21,6 +21,7 @@ const SHORTCUT_GROUPS: Array<{title: string; shortcutIds: ShortcutId[]}> = [
     title: 'Blur',
     shortcutIds: [
       'toggle-blur-type',
+      'open-auto-blur-menu',
       'toggle-outlines',
       'radius-step',
       'strength-step',

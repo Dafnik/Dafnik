@@ -15,6 +15,7 @@ export type ShortcutId =
   | 'toggle-blur-type'
   | 'cycle-split-direction'
   | 'toggle-split-placement'
+  | 'open-auto-blur-menu'
   | 'toggle-outlines'
   | 'radius-step'
   | 'strength-step';
@@ -40,6 +41,7 @@ export const EDITOR_SHORTCUTS: ShortcutDefinition[] = [
   {id: 'switch-tool', label: 'Switch tool', keys: 'MOD+T'},
   {id: 'load-template-slot', label: 'Load template slot', keys: 'MOD+1-9'},
   {id: 'toggle-blur-type', label: 'Toggle blur type', keys: 'MOD+B'},
+  {id: 'open-auto-blur-menu', label: 'Open auto blur menu', keys: 'MOD+A'},
   {id: 'cycle-split-direction', label: 'Cycle direction', keys: 'MOD+D'},
   {id: 'toggle-split-placement', label: 'Cycle placement', keys: 'MOD+P'},
   {id: 'toggle-outlines', label: 'Toggle outlines', keys: 'MOD+O'},

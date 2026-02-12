@@ -22,6 +22,7 @@ describe('shortcut-definitions', () => {
     expect(formatShortcutById('toggle-split-placement', {platform: 'Win32'})).toBe('Ctrl+P');
     expect(formatShortcutById('copy-selection', {platform: 'Win32'})).toBe('Ctrl+C');
     expect(formatShortcutById('paste-selection', {platform: 'MacIntel'})).toBe('Cmd+V');
+    expect(formatShortcutById('open-auto-blur-menu', {platform: 'Win32'})).toBe('Ctrl+A');
     expect(formatShortcutById('load-template-slot', {platform: 'MacIntel'})).toBe('Cmd+1-9');
     expect(formatShortcutById('load-template-slot', {platform: 'Win32'})).toBe('Ctrl+1-9');
     expect(formatShortcutTooltip('Zoom', ['zoom', 'zoom-step'], {platform: 'Win32'})).toBe(
