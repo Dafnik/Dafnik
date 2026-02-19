@@ -86,9 +86,6 @@ export function EditorToolbar() {
       className="border-border flex h-12 flex-shrink-0 items-center justify-between border-b-2 px-3"
       style={{background: 'oklch(var(--sidebar-background))'}}>
       <div className="flex items-center gap-2">
-        <div className="bg-primary border-foreground flex h-7 w-7 items-center justify-center border-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.72)]">
-          <span className="text-primary-foreground text-xs font-black">S</span>
-        </div>
         <span className="text-foreground hidden text-sm font-black tracking-wider uppercase sm:block">
           Screenshot Editor
         </span>
