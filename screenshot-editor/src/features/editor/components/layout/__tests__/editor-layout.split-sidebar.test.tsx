@@ -3,13 +3,14 @@ import {describe, expect, it} from 'vitest';
 import {EditorLayout} from '@/features/editor/components/layout/editor-layout';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
-function renderEditorLayout() {
+function renderEditorLayout(isLibraryMode = false) {
   return render(
     <EditorLayout
       onAddSecondImage={() => {}}
       onSelectFirstLightImage={() => {}}
       onSelectSecondLightImage={() => {}}
       onCancelLightSelection={() => {}}
+      isLibraryMode={isLibraryMode}
     />,
   );
 }

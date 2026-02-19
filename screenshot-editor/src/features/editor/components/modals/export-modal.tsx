@@ -11,7 +11,8 @@ const ALL_FORMATS: {id: ExportFormat; label: string; mime: string; ext: string}[
   {id: 'jpg', label: 'JPG', mime: 'image/jpeg', ext: 'jpg'},
 ];
 
-const STORAGE_KEY = 'screenshot-editor-export-formats';
+const FORMATS_STORAGE_KEY = 'screenshot-editor-export-formats';
+const LEAVE_AFTER_EXPORT_STORAGE_KEY = 'screenshot-editor-export-leave-after-v1';
 
 function getDefaultName() {
   const now = new Date();
@@ -23,7 +24,7 @@ function getSavedFormats(): ExportFormat[] {
   if (typeof window === 'undefined') return ['png'];
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(FORMATS_STORAGE_KEY);
     if (!raw) return ['png'];
 
     const parsed = JSON.parse(raw) as ExportFormat[];
@@ -37,7 +38,27 @@ function getSavedFormats(): ExportFormat[] {
 
 function saveFormats(formats: ExportFormat[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(formats));
+    localStorage.setItem(FORMATS_STORAGE_KEY, JSON.stringify(formats));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function getSavedLeaveAfterExport(): boolean {
+  if (typeof window === 'undefined') return true;
+
+  try {
+    const raw = localStorage.getItem(LEAVE_AFTER_EXPORT_STORAGE_KEY);
+    if (raw === null) return true;
+    return raw === '1';
+  } catch {
+    return true;
+  }
+}
+
+function saveLeaveAfterExport(value: boolean) {
+  try {
+    localStorage.setItem(LEAVE_AFTER_EXPORT_STORAGE_KEY, value ? '1' : '0');
   } catch {
     // ignore storage failures
   }
@@ -45,20 +66,23 @@ function saveFormats(formats: ExportFormat[]) {
 
 interface ExportModalProps {
   canvasRef: HTMLCanvasElement | null;
+  onExportComplete?: (payload: {leaveAfterExport: boolean}) => void;
 }
 
-export function ExportModal({canvasRef}: ExportModalProps) {
+export function ExportModal({canvasRef, onExportComplete}: ExportModalProps) {
   const open = useEditorStore((state) => state.showExportModal);
   const exportBaseName = useEditorStore((state) => state.exportBaseName);
   const hasSplitImage = useEditorStore((state) => Boolean(state.image2));
   const closeExportModal = useEditorStore((state) => state.closeExportModal);
   const [fileName, setFileName] = useState(getDefaultName);
   const [selectedFormats, setSelectedFormats] = useState<ExportFormat[]>(getSavedFormats);
+  const [leaveAfterExport, setLeaveAfterExport] = useState<boolean>(getSavedLeaveAfterExport);
 
   useEffect(() => {
     if (!open) return;
     setFileName(exportBaseName || getDefaultName());
     setSelectedFormats(getSavedFormats());
+    setLeaveAfterExport(getSavedLeaveAfterExport());
   }, [exportBaseName, open]);
 
   const toggleFormat = useCallback((format: ExportFormat) => {
@@ -75,6 +99,7 @@ export function ExportModal({canvasRef}: ExportModalProps) {
     if (!canvasRef) return;
 
     saveFormats(selectedFormats);
+    saveLeaveAfterExport(leaveAfterExport);
 
     for (const formatId of selectedFormats) {
       const format = ALL_FORMATS.find((item) => item.id === formatId);
@@ -90,7 +115,8 @@ export function ExportModal({canvasRef}: ExportModalProps) {
     }
 
     closeExportModal();
-  }, [canvasRef, closeExportModal, fileName, selectedFormats]);
+    onExportComplete?.({leaveAfterExport});
+  }, [canvasRef, closeExportModal, fileName, leaveAfterExport, onExportComplete, selectedFormats]);
 
   useEffect(() => {
     if (!open) return;
@@ -180,6 +206,27 @@ export function ExportModal({canvasRef}: ExportModalProps) {
             </div>
             <p className="text-muted-foreground text-[11px]">
               Selected formats will be remembered for next time.
+            </p>
+          </div>
+
+          <div className="border-border bg-secondary/35 flex flex-col gap-2 border-2 p-3">
+            <button
+              type="button"
+              onClick={() => setLeaveAfterExport((current) => !current)}
+              aria-pressed={leaveAfterExport}
+              className="text-foreground flex items-center gap-2 text-left text-sm font-medium">
+              <span
+                className={`flex h-5 w-5 items-center justify-center border-2 ${
+                  leaveAfterExport
+                    ? 'bg-primary/15 border-primary text-primary'
+                    : 'border-border bg-background text-transparent'
+                }`}>
+                <Check className="h-3.5 w-3.5" />
+              </span>
+              Leave editor after export
+            </button>
+            <p className="text-muted-foreground text-[11px]">
+              If enabled, export returns to library when present, otherwise to upload.
             </p>
           </div>
         </div>

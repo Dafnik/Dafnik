@@ -5,13 +5,14 @@ import {EditorLayout} from '@/features/editor/components/layout/editor-layout';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
-function renderEditorLayout() {
+function renderEditorLayout(isLibraryMode = false) {
   return render(
     <EditorLayout
       onAddSecondImage={() => {}}
       onSelectFirstLightImage={() => {}}
       onSelectSecondLightImage={() => {}}
       onCancelLightSelection={() => {}}
+      isLibraryMode={isLibraryMode}
     />,
   );
 }
@@ -30,6 +31,20 @@ describe('EditorToolbar shortcut tooltips', () => {
       }),
     ).toBeInTheDocument();
     expect(newButton).not.toHaveAttribute('title');
+  });
+
+  it('shows Back to library label and tooltip in library mode', async () => {
+    const user = userEvent.setup();
+    renderEditorLayout(true);
+
+    const backButton = screen.getByRole('button', {name: /back to library/i});
+    await user.hover(backButton);
+
+    expect(
+      await screen.findByRole('tooltip', {
+        name: formatShortcutTooltip('Back to library', ['new-project']),
+      }),
+    ).toBeInTheDocument();
   });
 
   it('shows a shortcut tooltip for zoom input', async () => {

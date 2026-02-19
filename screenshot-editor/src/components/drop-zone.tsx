@@ -4,12 +4,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {Upload, ImageIcon} from 'lucide-react';
 
 interface DropZoneProps {
-  onImagesLoaded: (
-    image1: string,
-    image2: string | null,
-    firstFileName: string | null,
-    secondFileName: string | null,
-  ) => void;
+  onImagesLoaded: (files: File[]) => void;
 }
 
 function normalizeKey(key: string): string {
@@ -46,24 +41,7 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
     (files: FileList | File[]) => {
       const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
       if (imageFiles.length === 0) return;
-
-      const readers: Promise<string>[] = imageFiles.slice(0, 2).map(
-        (file) =>
-          new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target?.result as string);
-            reader.readAsDataURL(file);
-          }),
-      );
-
-      Promise.all(readers).then((results) => {
-        onImagesLoaded(
-          results[0],
-          results[1] || null,
-          imageFiles[0]?.name ?? null,
-          imageFiles[1]?.name ?? null,
-        );
-      });
+      onImagesLoaded(imageFiles);
     },
     [onImagesLoaded],
   );
@@ -139,7 +117,7 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
           </div>
           <div className="text-center">
             <p className="text-foreground text-lg font-medium">Drop screenshots here</p>
-            <p className="mt-1 text-sm">Drop 1 or 2 images, or click to browse</p>
+            <p className="mt-1 text-sm">Drop one image, one pair, or a full screenshot library</p>
           </div>
           <div className="mt-2 flex items-center gap-6 text-xs">
             <span className="flex items-center gap-1.5">

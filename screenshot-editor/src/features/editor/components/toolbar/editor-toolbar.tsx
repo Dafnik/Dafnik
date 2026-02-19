@@ -31,7 +31,11 @@ function ShortcutTooltip({content, children}: ShortcutTooltipProps) {
   );
 }
 
-export function EditorToolbar() {
+interface EditorToolbarProps {
+  isLibraryMode?: boolean;
+}
+
+export function EditorToolbar({isLibraryMode = false}: EditorToolbarProps) {
   const zoom = useEditorStore((state) => state.zoom);
   const canUndo = useEditorStore((state) => state.canUndo);
   const canRedo = useEditorStore((state) => state.canRedo);
@@ -74,7 +78,11 @@ export function EditorToolbar() {
     setZoomInput(String(zoom));
   }, [zoom]);
 
-  const newProjectTooltip = formatShortcutTooltip('New project', ['new-project']);
+  const newProjectLabel = isLibraryMode ? 'Back to library' : 'New';
+  const newProjectTooltip = formatShortcutTooltip(
+    isLibraryMode ? 'Back to library' : 'New project',
+    ['new-project'],
+  );
   const zoomStepTooltip = formatShortcutTooltip('Zoom +/-', ['zoom-step']);
   const zoomInputTooltip = formatShortcutTooltip('Zoom', ['zoom', 'zoom-step']);
   const undoTooltip = formatShortcutTooltip('Undo', ['undo']);
@@ -98,7 +106,7 @@ export function EditorToolbar() {
             className="h-7 gap-1.5 px-2.5 text-xs"
             onClick={handleNewProject}>
             <ImagePlus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">New</span>
+            <span className="hidden sm:inline">{newProjectLabel}</span>
           </Button>
         </ShortcutTooltip>
 

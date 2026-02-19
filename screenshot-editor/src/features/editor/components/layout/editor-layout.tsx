@@ -13,6 +13,8 @@ interface EditorLayoutProps {
   onSelectFirstLightImage: () => void;
   onSelectSecondLightImage: () => void;
   onCancelLightSelection: () => void;
+  onExportComplete?: (payload: {leaveAfterExport: boolean}) => void;
+  isLibraryMode?: boolean;
 }
 
 export function EditorLayout({
@@ -20,6 +22,8 @@ export function EditorLayout({
   onSelectFirstLightImage,
   onSelectSecondLightImage,
   onCancelLightSelection,
+  onExportComplete,
+  isLibraryMode = false,
 }: EditorLayoutProps) {
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
   const [selectedStrokeIndices, setSelectedStrokeIndices] = useState<number[]>([]);
@@ -27,7 +31,7 @@ export function EditorLayout({
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
       <div className="flex h-screen w-screen flex-col">
-        <EditorToolbar />
+        <EditorToolbar isLibraryMode={isLibraryMode} />
 
         <div className="flex flex-1 overflow-hidden">
           <EditorSidebar selectedStrokeIndices={selectedStrokeIndices} />
@@ -38,7 +42,7 @@ export function EditorLayout({
           <SplitViewSidebar onAddSecondImage={onAddSecondImage} />
         </div>
 
-        <ExportModal canvasRef={canvasEl} />
+        <ExportModal canvasRef={canvasEl} onExportComplete={onExportComplete} />
         <ShortcutsModal />
         <LightImageSelectorModal
           onSelectFirst={onSelectFirstLightImage}
