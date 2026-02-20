@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
-import {confirmResetProject} from '@/features/editor/lib/confirm-reset-project';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
+import {loadSkipResetProjectConfirmation} from '@/features/editor/state/reset-project-confirmation-storage';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface ShortcutTooltipProps {
@@ -46,6 +46,7 @@ export function EditorToolbar({isLibraryMode = false}: EditorToolbarProps) {
   const setZoom = useEditorStore((state) => state.setZoom);
   const setPan = useEditorStore((state) => state.setPan);
   const openExportModal = useEditorStore((state) => state.openExportModal);
+  const openResetProjectModal = useEditorStore((state) => state.openResetProjectModal);
   const resetProject = useEditorStore((state) => state.resetProject);
   const resetSettingsToDefaults = useEditorStore((state) => state.resetSettingsToDefaults);
 
@@ -70,9 +71,12 @@ export function EditorToolbar({isLibraryMode = false}: EditorToolbarProps) {
   }, [setPan]);
 
   const handleNewProject = useCallback(() => {
-    if (!confirmResetProject()) return;
-    resetProject();
-  }, [resetProject]);
+    if (loadSkipResetProjectConfirmation()) {
+      resetProject();
+      return;
+    }
+    openResetProjectModal();
+  }, [openResetProjectModal, resetProject]);
 
   useEffect(() => {
     setZoomInput(String(zoom));

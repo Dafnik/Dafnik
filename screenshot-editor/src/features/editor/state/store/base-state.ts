@@ -34,6 +34,7 @@ export function createBaseState() {
     currentStroke: null,
     isEditing: false,
     showExportModal: false,
+    showResetProjectModal: false,
     exportBaseName: null,
     showShortcutsModal: false,
     showLightSelectorModal: false,

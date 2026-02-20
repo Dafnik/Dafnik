@@ -1,8 +1,9 @@
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {TooltipProvider} from '@/components/ui/tooltip';
 import {EditorSidebar} from '@/features/editor/components/sidebar/editor-sidebar';
+import {AUTO_BLUR_DEFAULTS_STORAGE_KEY} from '@/features/editor/state/auto-blur-defaults-storage';
 import {AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY} from '@/features/editor/state/auto-blur-custom-text-storage';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
@@ -480,6 +481,127 @@ describe('EditorSidebar blur settings behavior', () => {
     expect(screen.queryByRole('button', {name: /auto blur saved text account #42/i})).toBeNull();
     const savedAfterDelete = localStorage.getItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY);
     expect(JSON.parse(savedAfterDelete ?? '[]')).toEqual([]);
+  });
+
+  it('toggles apply-on-load checkboxes for email, phone, and saved custom text', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY, JSON.stringify(['Account #42']));
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({activeTool: 'blur'});
+
+    renderSidebar();
+
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /apply email auto blur on document load/i}));
+    await user.click(screen.getByRole('button', {name: /apply phone auto blur on document load/i}));
+    await user.click(
+      screen.getByRole('button', {
+        name: /apply saved text account #42 auto blur on document load/i,
+      }),
+    );
+
+    const [autoBlurStrengthSlider] = screen.getAllByRole('slider');
+    fireEvent.keyDown(autoBlurStrengthSlider, {key: 'ArrowRight'});
+
+    expect(JSON.parse(localStorage.getItem(AUTO_BLUR_DEFAULTS_STORAGE_KEY) ?? '{}')).toEqual({
+      email: true,
+      phone: true,
+      customEntries: ['account #42'],
+    });
+    expect(useEditorStore.getState().brushStrength).toBe(11);
+  });
+
+  it('auto-runs enabled email rule once on document load', async () => {
+    localStorage.setItem(
+      AUTO_BLUR_DEFAULTS_STORAGE_KEY,
+      JSON.stringify({email: true, phone: false, customEntries: []}),
+    );
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    detectEmailsInImageMock.mockResolvedValueOnce([
+      {text: 'one@example.com', box: {x: 40, y: 30, width: 80, height: 20}},
+    ]);
+
+    renderSidebar();
+
+    await waitFor(() => {
+      expect(detectEmailsInImageMock).toHaveBeenCalledTimes(1);
+      expect(useEditorStore.getState().blurStrokes).toHaveLength(1);
+    });
+  });
+
+  it('does not auto-run email rule on load when the default is disabled', async () => {
+    localStorage.setItem(
+      AUTO_BLUR_DEFAULTS_STORAGE_KEY,
+      JSON.stringify({email: false, phone: false, customEntries: []}),
+    );
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    detectEmailsInImageMock.mockResolvedValueOnce([
+      {text: 'one@example.com', box: {x: 40, y: 30, width: 80, height: 20}},
+    ]);
+
+    renderSidebar();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(detectEmailsInImageMock).toHaveBeenCalledTimes(0);
+  });
+
+  it('removes saved custom text auto-run preference when deleting custom text', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY, JSON.stringify(['Account #42']));
+    localStorage.setItem(
+      AUTO_BLUR_DEFAULTS_STORAGE_KEY,
+      JSON.stringify({email: false, phone: false, customEntries: ['account #42']}),
+    );
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({activeTool: 'blur'});
+
+    renderSidebar();
+
+    await openAutoBlurMenu(user);
+    await user.click(screen.getByRole('button', {name: /delete saved text account #42/i}));
+
+    expect(JSON.parse(localStorage.getItem(AUTO_BLUR_DEFAULTS_STORAGE_KEY) ?? '{}')).toEqual({
+      email: false,
+      phone: false,
+      customEntries: [],
+    });
+  });
+
+  it('reset settings clears all auto blur settings and saved custom entries', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY, JSON.stringify(['Account #42']));
+    localStorage.setItem(
+      AUTO_BLUR_DEFAULTS_STORAGE_KEY,
+      JSON.stringify({email: true, phone: true, customEntries: ['account #42']}),
+    );
+    useEditorStore
+      .getState()
+      .initializeEditor({image1: 'img-1', image2: null, width: 300, height: 150});
+    useEditorStore.setState({activeTool: 'blur', brushStrength: 22});
+
+    renderSidebar();
+
+    act(() => {
+      useEditorStore.getState().resetSettingsToDefaults();
+    });
+    await openAutoBlurMenu(user);
+
+    expect(useEditorStore.getState().brushStrength).toBe(10);
+    expect(screen.queryByRole('button', {name: /auto blur saved text account #42/i})).toBeNull();
+    expect(JSON.parse(localStorage.getItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY) ?? '[]')).toEqual([]);
+    expect(JSON.parse(localStorage.getItem(AUTO_BLUR_DEFAULTS_STORAGE_KEY) ?? '{}')).toEqual({
+      email: false,
+      phone: false,
+      customEntries: [],
+    });
   });
 
   it('shows no-email status and keeps history unchanged when OCR finds no emails', async () => {

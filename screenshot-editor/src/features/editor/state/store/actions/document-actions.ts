@@ -1,4 +1,8 @@
 import {withHistoryMeta} from '@/features/editor/state/history';
+import {RESET_AUTO_BLUR_SETTINGS_EVENT} from '@/features/editor/lib/events';
+import {saveAutoBlurDefaults} from '@/features/editor/state/auto-blur-defaults-storage';
+import {saveAutoBlurCustomTexts} from '@/features/editor/state/auto-blur-custom-text-storage';
+import {saveSkipResetProjectConfirmation} from '@/features/editor/state/reset-project-confirmation-storage';
 import {orderBySidePreference} from '@/features/editor/state/store/helpers';
 import type {EditorStoreActions} from '@/features/editor/state/types';
 import {DEFAULT_SETTINGS} from '@/features/editor/state/types';
@@ -44,6 +48,7 @@ export function createDocumentActions({
         panX: 0,
         panY: 0,
         showExportModal: false,
+        showResetProjectModal: false,
         exportBaseName: exportBaseName ?? null,
         showShortcutsModal: false,
         showLightSelectorModal: false,
@@ -71,6 +76,7 @@ export function createDocumentActions({
         currentStroke: null,
         isEditing: false,
         showExportModal: false,
+        showResetProjectModal: false,
         exportBaseName: null,
         showShortcutsModal: false,
         showLightSelectorModal: false,
@@ -89,6 +95,13 @@ export function createDocumentActions({
     },
 
     resetSettingsToDefaults: () => {
+      saveAutoBlurDefaults({email: false, phone: false, customEntries: []});
+      saveAutoBlurCustomTexts([]);
+      saveSkipResetProjectConfirmation(false);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(RESET_AUTO_BLUR_SETTINGS_EVENT));
+      }
+
       set(() => ({
         splitRatio: DEFAULT_SETTINGS.splitRatio,
         splitDirection: DEFAULT_SETTINGS.splitDirection,

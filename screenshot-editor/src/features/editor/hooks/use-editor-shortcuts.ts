@@ -17,7 +17,7 @@ import {
   normalizeKey,
 } from '@/features/editor/lib/keyboard';
 import type {BlurStroke, EditorStoreState, SplitDirection} from '@/features/editor/state/types';
-import {confirmResetProject} from '@/features/editor/lib/confirm-reset-project';
+import {loadSkipResetProjectConfirmation} from '@/features/editor/state/reset-project-confirmation-storage';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 const BRUSH_RADIUS_STEP = 1;
@@ -30,7 +30,7 @@ const BRUSH_STRENGTH_MAX = 30;
 const ZOOM_MIN = 10;
 const ZOOM_MAX = 500;
 const PASTE_OFFSET_PX = 45;
-const BLUR_TOOL_ORDER = ['drag', 'select', 'blur'] as const;
+const BLUR_TOOL_ORDER = ['select', 'blur'] as const;
 const BLUR_TYPE_ORDER = ['normal', 'pixelated'] as const;
 const SPLIT_DIRECTION_ORDER: SplitDirection[] = [
   'vertical',
@@ -226,8 +226,10 @@ export function useEditorShortcuts() {
       if (isLetterKey(event, 'r') || isLetterKey(event, 's') || isLetterKey(event, 'n')) {
         event.preventDefault();
         if (isLetterKey(event, 'n')) {
-          if (confirmResetProject()) {
+          if (loadSkipResetProjectConfirmation()) {
             store.resetProject();
+          } else {
+            store.openResetProjectModal();
           }
         }
         return;

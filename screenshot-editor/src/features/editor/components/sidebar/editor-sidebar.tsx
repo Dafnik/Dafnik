@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createEmailBlurStrokes} from '@/features/editor/lib/email-blur-strokes';
+import {RESET_AUTO_BLUR_SETTINGS_EVENT} from '@/features/editor/lib/events';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
 import {
   detectCustomTextInImage,
@@ -7,6 +8,12 @@ import {
   detectPhoneNumbersInImage,
   type DetectedTextMatch,
 } from '@/features/editor/services/ocr-text-detection';
+import {
+  loadAutoBlurDefaults,
+  normalizeAutoBlurDefaultCustomEntry,
+  saveAutoBlurDefaults,
+  type AutoBlurDefaults,
+} from '@/features/editor/state/auto-blur-defaults-storage';
 import {
   loadAutoBlurCustomTexts,
   saveAutoBlurCustomTexts,
@@ -39,8 +46,13 @@ function upsertSavedCustomText(existing: string[], nextText: string): string[] {
 
 export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   const pendingSelectedStrengthHistoryRef = useRef(false);
+  const autoBlurAppliedDocumentRef = useRef<string | null>(null);
+  const autoBlurDefaultInFlightRef = useRef(false);
   const [isAutoBlurPending, setIsAutoBlurPending] = useState(false);
   const [autoBlurStatus, setAutoBlurStatus] = useState<string | undefined>(undefined);
+  const [autoBlurDefaults, setAutoBlurDefaults] = useState<AutoBlurDefaults>(() =>
+    loadAutoBlurDefaults(),
+  );
   const [savedAutoBlurCustomTexts, setSavedAutoBlurCustomTexts] = useState<string[]>(() =>
     loadAutoBlurCustomTexts(),
   );
@@ -59,6 +71,7 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   const splitRatio = useEditorStore((state) => state.splitRatio);
   const splitDirection = useEditorStore((state) => state.splitDirection);
   const showBlurOutlines = useEditorStore((state) => state.showBlurOutlines);
+  const historyIndex = useEditorStore((state) => state.historyIndex);
 
   const setActiveTool = useEditorStore((state) => state.setActiveTool);
   const setBlurType = useEditorStore((state) => state.setBlurType);
@@ -80,6 +93,17 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   const strengthTooltip = formatShortcutTooltip('Strength +/-', ['strength-step']);
   const shortcutsTooltip = formatShortcutTooltip('Shortcuts', ['shortcuts-modal']);
   const autoBlurTooltip = formatShortcutTooltip('Auto blur text patterns', ['open-auto-blur-menu']);
+  const defaultCustomAutoBlurEntries = useMemo(
+    () => new Set(autoBlurDefaults.customEntries),
+    [autoBlurDefaults.customEntries],
+  );
+  const enabledDefaultAutoBlurCustomTexts = useMemo(
+    () =>
+      savedAutoBlurCustomTexts.filter((entry) =>
+        defaultCustomAutoBlurEntries.has(normalizeAutoBlurDefaultCustomEntry(entry)),
+      ),
+    [defaultCustomAutoBlurEntries, savedAutoBlurCustomTexts],
+  );
 
   const validSelectedStrokeIndices = useMemo(() => {
     const unique = [...new Set(selectedStrokeIndices)];
@@ -251,6 +275,17 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
     [appendDetectedBlurStrokes, image1, imageHeight, imageWidth, isAutoBlurPending],
   );
 
+  const updateAutoBlurDefaults = useCallback(
+    (updater: (previous: AutoBlurDefaults) => AutoBlurDefaults) => {
+      setAutoBlurDefaults((previous) => {
+        const next = updater(previous);
+        saveAutoBlurDefaults(next);
+        return next;
+      });
+    },
+    [],
+  );
+
   const handleAutoBlurEmails = useCallback(() => {
     runAutoBlurDetection(
       () =>
@@ -325,15 +360,53 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
     ],
   );
 
-  const handleDeleteAutoBlurCustomText = useCallback((text: string) => {
-    const normalized = normalizeSavedCustomText(text);
+  const handleDeleteAutoBlurCustomText = useCallback(
+    (text: string) => {
+      const normalized = normalizeSavedCustomText(text);
 
-    setSavedAutoBlurCustomTexts((previous) => {
-      const next = previous.filter((entry) => normalizeSavedCustomText(entry) !== normalized);
-      saveAutoBlurCustomTexts(next);
-      return next;
-    });
-  }, []);
+      setSavedAutoBlurCustomTexts((previous) => {
+        const next = previous.filter((entry) => normalizeSavedCustomText(entry) !== normalized);
+        saveAutoBlurCustomTexts(next);
+        return next;
+      });
+      updateAutoBlurDefaults((previous) => ({
+        ...previous,
+        customEntries: previous.customEntries.filter((entry) => entry !== normalized),
+      }));
+    },
+    [updateAutoBlurDefaults],
+  );
+
+  const toggleAutoBlurEmailDefault = useCallback(() => {
+    updateAutoBlurDefaults((previous) => ({...previous, email: !previous.email}));
+  }, [updateAutoBlurDefaults]);
+
+  const toggleAutoBlurPhoneDefault = useCallback(() => {
+    updateAutoBlurDefaults((previous) => ({...previous, phone: !previous.phone}));
+  }, [updateAutoBlurDefaults]);
+
+  const toggleAutoBlurCustomTextDefault = useCallback(
+    (text: string) => {
+      const normalized = normalizeAutoBlurDefaultCustomEntry(text);
+      if (!normalized) return;
+
+      updateAutoBlurDefaults((previous) => {
+        const hasEntry = previous.customEntries.includes(normalized);
+        return {
+          ...previous,
+          customEntries: hasEntry
+            ? previous.customEntries.filter((entry) => entry !== normalized)
+            : [...previous.customEntries, normalized],
+        };
+      });
+    },
+    [updateAutoBlurDefaults],
+  );
+
+  const isAutoBlurCustomTextDefaultEnabled = useCallback(
+    (text: string) => defaultCustomAutoBlurEntries.has(normalizeAutoBlurDefaultCustomEntry(text)),
+    [defaultCustomAutoBlurEntries],
+  );
 
   useEffect(() => {
     if (!isSelectToolWithSelection) {
@@ -344,6 +417,129 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
   useEffect(() => {
     setAutoBlurStatus(undefined);
   }, [image1, image2, imageHeight, imageWidth, splitDirection, splitRatio]);
+
+  useEffect(() => {
+    const handleResetAutoBlurSettings = () => {
+      setAutoBlurDefaults(loadAutoBlurDefaults());
+      setSavedAutoBlurCustomTexts(loadAutoBlurCustomTexts());
+      setAutoBlurStatus(undefined);
+      autoBlurAppliedDocumentRef.current = null;
+    };
+
+    window.addEventListener(RESET_AUTO_BLUR_SETTINGS_EVENT, handleResetAutoBlurSettings);
+    return () => {
+      window.removeEventListener(RESET_AUTO_BLUR_SETTINGS_EVENT, handleResetAutoBlurSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (image1 && imageWidth > 0 && imageHeight > 0) return;
+    autoBlurAppliedDocumentRef.current = null;
+    autoBlurDefaultInFlightRef.current = false;
+  }, [image1, imageHeight, imageWidth]);
+
+  useEffect(() => {
+    if (!image1 || imageWidth <= 0 || imageHeight <= 0) return;
+    if (historyIndex !== 0) return;
+    if (isAutoBlurPending || autoBlurDefaultInFlightRef.current) return;
+
+    const defaultRulesEnabled =
+      autoBlurDefaults.email ||
+      autoBlurDefaults.phone ||
+      enabledDefaultAutoBlurCustomTexts.length > 0;
+    if (!defaultRulesEnabled) return;
+
+    const documentKey = `${image1}|${image2 ?? ''}|${imageWidth}x${imageHeight}`;
+    if (autoBlurAppliedDocumentRef.current === documentKey) return;
+
+    autoBlurAppliedDocumentRef.current = documentKey;
+    autoBlurDefaultInFlightRef.current = true;
+    setIsAutoBlurPending(true);
+    setAutoBlurStatus(undefined);
+
+    void (async () => {
+      const allMatches: DetectedTextMatch[] = [];
+      const failedRules: string[] = [];
+
+      const detectionOptions = {
+        image1,
+        image2,
+        imageWidth,
+        imageHeight,
+        splitDirection,
+        splitRatio,
+      };
+
+      try {
+        if (autoBlurDefaults.email) {
+          try {
+            allMatches.push(...(await detectEmailsInImage(detectionOptions)));
+          } catch {
+            failedRules.push('email');
+          }
+        }
+
+        if (autoBlurDefaults.phone) {
+          try {
+            allMatches.push(...(await detectPhoneNumbersInImage(detectionOptions)));
+          } catch {
+            failedRules.push('phone');
+          }
+        }
+
+        for (const query of enabledDefaultAutoBlurCustomTexts) {
+          try {
+            allMatches.push(...(await detectCustomTextInImage({...detectionOptions, query})));
+          } catch {
+            failedRules.push(`custom "${query}"`);
+          }
+        }
+
+        if (allMatches.length > 0) {
+          const nextStrokes = createEmailBlurStrokes({
+            boxes: allMatches.map((match) => match.box),
+            imageWidth,
+            imageHeight,
+            blurType,
+            strength: brushStrength,
+            radius: brushRadius,
+          });
+          const appended = appendBlurStrokes(nextStrokes, {commitHistory: true});
+          if (appended) {
+            setShowBlurOutlines(true);
+          }
+        }
+
+        const summary =
+          allMatches.length > 0
+            ? `Auto blur on load: blurred ${allMatches.length} match${allMatches.length === 1 ? '' : 'es'}.`
+            : 'Auto blur on load: no matches detected.';
+        const failureSuffix =
+          failedRules.length > 0 ? ` Failed rules: ${failedRules.join(', ')}.` : '';
+        setAutoBlurStatus(`${summary}${failureSuffix}`);
+      } finally {
+        autoBlurDefaultInFlightRef.current = false;
+        setIsAutoBlurPending(false);
+      }
+    })();
+  }, [
+    appendBlurStrokes,
+    autoBlurDefaults.email,
+    autoBlurDefaults.phone,
+    blurType,
+    brushRadius,
+    brushStrength,
+    enabledDefaultAutoBlurCustomTexts,
+    historyIndex,
+    image1,
+    image2,
+    imageHeight,
+    imageWidth,
+    isAutoBlurPending,
+    setShowBlurOutlines,
+    splitDirection,
+    splitRatio,
+  ]);
 
   return (
     <aside
@@ -383,6 +579,14 @@ export function EditorSidebar({selectedStrokeIndices}: EditorSidebarProps) {
         onAutoBlurPhoneNumbers={handleAutoBlurPhoneNumbers}
         onAutoBlurCustomText={handleAutoBlurCustomText}
         onDeleteAutoBlurCustomText={handleDeleteAutoBlurCustomText}
+        autoBlurStrength={brushStrength}
+        onAutoBlurStrengthChange={setBrushStrength}
+        autoBlurApplyOnLoadEmail={autoBlurDefaults.email}
+        autoBlurApplyOnLoadPhone={autoBlurDefaults.phone}
+        isAutoBlurApplyOnLoadCustomText={isAutoBlurCustomTextDefaultEnabled}
+        onToggleAutoBlurApplyOnLoadEmail={toggleAutoBlurEmailDefault}
+        onToggleAutoBlurApplyOnLoadPhone={toggleAutoBlurPhoneDefault}
+        onToggleAutoBlurApplyOnLoadCustomText={toggleAutoBlurCustomTextDefault}
         savedAutoBlurCustomTexts={savedAutoBlurCustomTexts}
         isAutoBlurPending={isAutoBlurPending}
         autoBlurDisabled={autoBlurDisabled}

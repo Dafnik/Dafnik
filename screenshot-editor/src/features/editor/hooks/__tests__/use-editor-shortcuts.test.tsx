@@ -2,6 +2,7 @@ import {fireEvent, render} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import {useEditorShortcuts} from '@/features/editor/hooks/use-editor-shortcuts';
 import {OPEN_AUTO_BLUR_MENU_EVENT} from '@/features/editor/lib/keyboard';
+import {RESET_PROJECT_SKIP_CONFIRMATION_STORAGE_KEY} from '@/features/editor/state/reset-project-confirmation-storage';
 import type {BlurStroke, BlurTemplate} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
@@ -260,7 +261,7 @@ describe('useEditorShortcuts', () => {
     expect(useEditorStore.getState().zoom).toBe(230);
   });
 
-  it('toggles blur type, cycles drag/select/blur tools, and opens export modal', () => {
+  it('toggles blur type, cycles select/blur tools, and opens export modal', () => {
     useEditorStore.setState({blurType: 'normal', activeTool: 'drag', showExportModal: false});
     render(<ShortcutsHarness />);
 
@@ -270,12 +271,12 @@ describe('useEditorShortcuts', () => {
     fireEvent.keyDown(window, {key: 't', ctrlKey: true});
     expect(useEditorStore.getState().activeTool).toBe('blur');
     fireEvent.keyDown(window, {key: 't', ctrlKey: true});
-    expect(useEditorStore.getState().activeTool).toBe('drag');
+    expect(useEditorStore.getState().activeTool).toBe('select');
     fireEvent.keyDown(window, {key: 'e', ctrlKey: true});
 
     const state = useEditorStore.getState();
     expect(state.blurType).toBe('pixelated');
-    expect(state.activeTool).toBe('drag');
+    expect(state.activeTool).toBe('select');
     expect(state.showExportModal).toBe(true);
   });
 
@@ -440,21 +441,23 @@ describe('useEditorShortcuts', () => {
     textInput.remove();
   });
 
-  it('confirms before starting a new project with Ctrl+N', () => {
-    const confirmMock = vi
-      .spyOn(window, 'confirm')
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(true);
+  it('opens reset project modal with Ctrl+N when skip preference is disabled', () => {
     useEditorStore.setState({image1: 'img-1', isEditing: true});
     render(<ShortcutsHarness />);
 
     fireEvent.keyDown(window, {key: 'n', ctrlKey: true});
     expect(useEditorStore.getState().image1).toBe('img-1');
+    expect(useEditorStore.getState().showResetProjectModal).toBe(true);
+  });
+
+  it('resets immediately with Ctrl+N when skip preference is enabled', () => {
+    localStorage.setItem(RESET_PROJECT_SKIP_CONFIRMATION_STORAGE_KEY, '1');
+    useEditorStore.setState({image1: 'img-1', isEditing: true});
+    render(<ShortcutsHarness />);
 
     fireEvent.keyDown(window, {key: 'n', ctrlKey: true});
     expect(useEditorStore.getState().image1).toBeNull();
-    expect(confirmMock).toHaveBeenCalledTimes(2);
-    confirmMock.mockRestore();
+    expect(useEditorStore.getState().showResetProjectModal).toBe(false);
   });
 
   it('deletes selected blur strokes with Backspace and commits history once', () => {

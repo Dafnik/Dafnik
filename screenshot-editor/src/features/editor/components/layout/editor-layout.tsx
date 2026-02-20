@@ -3,6 +3,7 @@ import {TooltipProvider} from '@/components/ui/tooltip';
 import {EditorCanvasRoot} from '@/features/editor/components/canvas/editor-canvas-root';
 import {ExportModal} from '@/features/editor/components/modals/export-modal';
 import {LightImageSelectorModal} from '@/features/editor/components/modals/light-image-selector-modal';
+import {ResetProjectModal} from '@/features/editor/components/modals/reset-project-modal';
 import {ShortcutsModal} from '@/features/editor/components/modals/shortcuts-modal';
 import {EditorSidebar} from '@/features/editor/components/sidebar/editor-sidebar';
 import {SplitViewSidebar} from '@/features/editor/components/sidebar/split-view-sidebar';
@@ -43,6 +44,7 @@ export function EditorLayout({
         </div>
 
         <ExportModal canvasRef={canvasEl} onExportComplete={onExportComplete} />
+        <ResetProjectModal />
         <ShortcutsModal />
         <LightImageSelectorModal
           onSelectFirst={onSelectFirstLightImage}

@@ -1,6 +1,7 @@
 import {
   AtSign,
   Brush,
+  Check,
   Droplets,
   Eye,
   Grid3X3,
@@ -47,6 +48,14 @@ interface BlurSettingsSectionProps {
   onAutoBlurPhoneNumbers: () => void;
   onAutoBlurCustomText: (text: string) => void;
   onDeleteAutoBlurCustomText: (text: string) => void;
+  autoBlurStrength: number;
+  onAutoBlurStrengthChange: (nextStrength: number) => void;
+  autoBlurApplyOnLoadEmail: boolean;
+  autoBlurApplyOnLoadPhone: boolean;
+  isAutoBlurApplyOnLoadCustomText: (text: string) => boolean;
+  onToggleAutoBlurApplyOnLoadEmail: () => void;
+  onToggleAutoBlurApplyOnLoadPhone: () => void;
+  onToggleAutoBlurApplyOnLoadCustomText: (text: string) => void;
   savedAutoBlurCustomTexts: string[];
   isAutoBlurPending: boolean;
   autoBlurDisabled: boolean;
@@ -82,6 +91,14 @@ export function BlurSettingsSection({
   onAutoBlurPhoneNumbers,
   onAutoBlurCustomText,
   onDeleteAutoBlurCustomText,
+  autoBlurStrength,
+  onAutoBlurStrengthChange,
+  autoBlurApplyOnLoadEmail,
+  autoBlurApplyOnLoadPhone,
+  isAutoBlurApplyOnLoadCustomText,
+  onToggleAutoBlurApplyOnLoadEmail,
+  onToggleAutoBlurApplyOnLoadPhone,
+  onToggleAutoBlurApplyOnLoadCustomText,
   savedAutoBlurCustomTexts,
   isAutoBlurPending,
   autoBlurDisabled,
@@ -156,6 +173,32 @@ export function BlurSettingsSection({
     onAutoBlurCustomText(trimmed);
   };
 
+  const renderApplyToggle = ({
+    label,
+    pressed,
+    onToggle,
+  }: {
+    label: string;
+    pressed: boolean;
+    onToggle: () => void;
+  }) => (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={pressed}
+      onClick={onToggle}
+      className="border-border hover:bg-secondary/70 flex h-8 w-8 items-center justify-center border-2 transition-colors">
+      <span
+        className={`flex h-4 w-4 items-center justify-center border ${
+          pressed
+            ? 'bg-primary/15 border-primary text-primary'
+            : 'border-border bg-background text-transparent'
+        }`}>
+        <Check className="h-3 w-3" />
+      </span>
+    </button>
+  );
+
   return (
     <div className="border-border border-b-2 p-4">
       <div className="mb-4 flex items-center justify-between gap-2">
@@ -209,29 +252,62 @@ export function BlurSettingsSection({
               <div
                 role="menu"
                 className="bg-background border-border absolute right-0 z-20 mt-1 w-64 border-2 p-2 shadow-[3px_3px_0_0_rgba(0,0,0,0.68)]">
+                <div className="border-border mb-2 border-b pb-2">
+                  <div className="mb-1 flex items-center justify-between">
+                    <Label className="text-muted-foreground text-[11px]">Auto blur strength</Label>
+                    <span className="text-muted-foreground text-[11px] tabular-nums">
+                      {autoBlurStrength}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[autoBlurStrength]}
+                    onValueChange={([value]) => onAutoBlurStrengthChange(value)}
+                    min={1}
+                    max={30}
+                    step={1}
+                    disabled={isAutoBlurPending}
+                    className="w-full"
+                    aria-label="Auto blur strength"
+                  />
+                </div>
+
                 <div className="space-y-1">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    aria-label="Auto blur email addresses"
-                    disabled={isAutoBlurPending}
-                    onClick={handleAutoBlurEmails}
-                    className="h-8 w-full justify-start text-xs">
-                    <AtSign className="h-3 w-3" />
-                    Email addresses
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    aria-label="Auto blur phone numbers"
-                    disabled={isAutoBlurPending}
-                    onClick={handleAutoBlurPhoneNumbers}
-                    className="h-8 w-full justify-start text-xs">
-                    <Phone className="h-3 w-3" />
-                    Phone numbers
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-label="Auto blur email addresses"
+                      disabled={isAutoBlurPending}
+                      onClick={handleAutoBlurEmails}
+                      className="h-8 min-w-0 flex-1 justify-start text-xs">
+                      <AtSign className="h-3 w-3" />
+                      Email addresses
+                    </Button>
+                    {renderApplyToggle({
+                      label: 'Apply email auto blur on document load',
+                      pressed: autoBlurApplyOnLoadEmail,
+                      onToggle: onToggleAutoBlurApplyOnLoadEmail,
+                    })}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-label="Auto blur phone numbers"
+                      disabled={isAutoBlurPending}
+                      onClick={handleAutoBlurPhoneNumbers}
+                      className="h-8 min-w-0 flex-1 justify-start text-xs">
+                      <Phone className="h-3 w-3" />
+                      Phone numbers
+                    </Button>
+                    {renderApplyToggle({
+                      label: 'Apply phone auto blur on document load',
+                      pressed: autoBlurApplyOnLoadPhone,
+                      onToggle: onToggleAutoBlurApplyOnLoadPhone,
+                    })}
+                  </div>
                 </div>
 
                 <div className="border-border mt-2 border-t pt-2">
@@ -283,6 +359,11 @@ export function BlurSettingsSection({
                           className="bg-secondary text-secondary-foreground hover:bg-secondary/80 h-7 min-w-0 flex-1 truncate rounded px-2 text-left text-[11px] disabled:cursor-not-allowed disabled:opacity-50">
                           {entry}
                         </button>
+                        {renderApplyToggle({
+                          label: `Apply saved text ${entry} auto blur on document load`,
+                          pressed: isAutoBlurApplyOnLoadCustomText(entry),
+                          onToggle: () => onToggleAutoBlurApplyOnLoadCustomText(entry),
+                        })}
                         <button
                           type="button"
                           aria-label={`Delete saved text ${entry}`}

@@ -7,6 +7,8 @@ export function createUiActions({
   EditorStoreActions,
   | 'openExportModal'
   | 'closeExportModal'
+  | 'openResetProjectModal'
+  | 'closeResetProjectModal'
   | 'setExportBaseName'
   | 'openShortcutsModal'
   | 'closeShortcutsModal'
@@ -17,6 +19,8 @@ export function createUiActions({
   return {
     openExportModal: () => set({showExportModal: true}),
     closeExportModal: () => set({showExportModal: false}),
+    openResetProjectModal: () => set({showResetProjectModal: true}),
+    closeResetProjectModal: () => set({showResetProjectModal: false}),
     setExportBaseName: (name) => set({exportBaseName: name?.trim() || null}),
 
     openShortcutsModal: () => set({showShortcutsModal: true}),

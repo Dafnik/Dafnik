@@ -36,6 +36,16 @@ describe('EditorSidebar shortcut tooltips', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows Alt + Mouseclick tooltip on drag tool', async () => {
+    const user = userEvent.setup();
+    renderEditorLayout();
+
+    const dragButton = screen.getByRole('button', {name: 'Drag'});
+    await user.hover(dragButton);
+
+    expect(await screen.findByRole('tooltip', {name: 'Alt + Mouseclick'})).toBeInTheDocument();
+  });
+
   it('shows blur type tooltip', async () => {
     useEditorStore.setState({activeTool: 'blur'});
     const user = userEvent.setup();

@@ -87,6 +87,7 @@ export type LightSelectorState = 'idle' | 'awaitingSelection' | 'resolved' | 'ca
 export interface UiSlice {
   isEditing: boolean;
   showExportModal: boolean;
+  showResetProjectModal: boolean;
   exportBaseName: string | null;
   showShortcutsModal: boolean;
   showLightSelectorModal: boolean;
@@ -210,6 +211,8 @@ export interface EditorStoreActions {
   loadBlurTemplate: (templateId: string) => ActionResult;
   openExportModal: () => void;
   closeExportModal: () => void;
+  openResetProjectModal: () => void;
+  closeResetProjectModal: () => void;
   setExportBaseName: (name: string | null) => void;
   openShortcutsModal: () => void;
   closeShortcutsModal: () => void;
