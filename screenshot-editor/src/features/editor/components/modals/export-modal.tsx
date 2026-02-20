@@ -1,9 +1,16 @@
 import {useCallback, useEffect, useState} from 'react';
 import {Check, Download, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
+import {ModalShell} from '@/features/editor/components/modals/modal-shell';
+import {useCloseOnEscape} from '@/features/editor/hooks/use-close-on-escape';
+import {
+  loadExportFormats,
+  loadLeaveAfterExport,
+  saveExportFormats,
+  saveLeaveAfterExport,
+  type ExportFormat,
+} from '@/features/editor/state/export-preferences-storage';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
-
-type ExportFormat = 'png' | 'webp' | 'jpg';
 
 const ALL_FORMATS: {id: ExportFormat; label: string; mime: string; ext: string}[] = [
   {id: 'png', label: 'PNG', mime: 'image/png', ext: 'png'},
@@ -11,57 +18,10 @@ const ALL_FORMATS: {id: ExportFormat; label: string; mime: string; ext: string}[
   {id: 'jpg', label: 'JPG', mime: 'image/jpeg', ext: 'jpg'},
 ];
 
-const FORMATS_STORAGE_KEY = 'screenshot-editor-export-formats';
-const LEAVE_AFTER_EXPORT_STORAGE_KEY = 'screenshot-editor-export-leave-after-v1';
-
 function getDefaultName() {
   const now = new Date();
   const date = now.toISOString().slice(0, 10).replace(/-/g, '');
   return `screenshot_${date}`;
-}
-
-function getSavedFormats(): ExportFormat[] {
-  if (typeof window === 'undefined') return ['png'];
-
-  try {
-    const raw = localStorage.getItem(FORMATS_STORAGE_KEY);
-    if (!raw) return ['png'];
-
-    const parsed = JSON.parse(raw) as ExportFormat[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return ['png'];
-
-    return parsed.filter((format) => ALL_FORMATS.some((item) => item.id === format));
-  } catch {
-    return ['png'];
-  }
-}
-
-function saveFormats(formats: ExportFormat[]) {
-  try {
-    localStorage.setItem(FORMATS_STORAGE_KEY, JSON.stringify(formats));
-  } catch {
-    // ignore storage failures
-  }
-}
-
-function getSavedLeaveAfterExport(): boolean {
-  if (typeof window === 'undefined') return true;
-
-  try {
-    const raw = localStorage.getItem(LEAVE_AFTER_EXPORT_STORAGE_KEY);
-    if (raw === null) return true;
-    return raw === '1';
-  } catch {
-    return true;
-  }
-}
-
-function saveLeaveAfterExport(value: boolean) {
-  try {
-    localStorage.setItem(LEAVE_AFTER_EXPORT_STORAGE_KEY, value ? '1' : '0');
-  } catch {
-    // ignore storage failures
-  }
 }
 
 interface ExportModalProps {
@@ -75,14 +35,20 @@ export function ExportModal({canvasRef, onExportComplete}: ExportModalProps) {
   const hasSplitImage = useEditorStore((state) => Boolean(state.image2));
   const closeExportModal = useEditorStore((state) => state.closeExportModal);
   const [fileName, setFileName] = useState(getDefaultName);
-  const [selectedFormats, setSelectedFormats] = useState<ExportFormat[]>(getSavedFormats);
-  const [leaveAfterExport, setLeaveAfterExport] = useState<boolean>(getSavedLeaveAfterExport);
+  const [selectedFormats, setSelectedFormats] = useState<ExportFormat[]>(() =>
+    loadExportFormats(['png']),
+  );
+  const [leaveAfterExport, setLeaveAfterExport] = useState<boolean>(() =>
+    loadLeaveAfterExport(true),
+  );
+
+  useCloseOnEscape(open, closeExportModal);
 
   useEffect(() => {
     if (!open) return;
     setFileName(exportBaseName || getDefaultName());
-    setSelectedFormats(getSavedFormats());
-    setLeaveAfterExport(getSavedLeaveAfterExport());
+    setSelectedFormats(loadExportFormats(['png']));
+    setLeaveAfterExport(loadLeaveAfterExport(true));
   }, [exportBaseName, open]);
 
   const toggleFormat = useCallback((format: ExportFormat) => {
@@ -98,7 +64,7 @@ export function ExportModal({canvasRef, onExportComplete}: ExportModalProps) {
   const handleExport = useCallback(() => {
     if (!canvasRef) return;
 
-    saveFormats(selectedFormats);
+    saveExportFormats(selectedFormats);
     saveLeaveAfterExport(leaveAfterExport);
 
     for (const formatId of selectedFormats) {
@@ -118,33 +84,11 @@ export function ExportModal({canvasRef, onExportComplete}: ExportModalProps) {
     onExportComplete?.({leaveAfterExport});
   }, [canvasRef, closeExportModal, fileName, leaveAfterExport, onExportComplete, selectedFormats]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeExportModal();
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [closeExportModal, open]);
-
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={closeExportModal}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') closeExportModal();
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Close export modal"
-      />
-
-      <div className="bg-card border-border relative w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden border-4 shadow-[10px_10px_0_0_rgba(0,0,0,0.75)]">
+    <ModalShell onClose={closeExportModal} overlayAriaLabel="Close export modal">
+      <div>
         <div className="border-border flex items-center justify-between border-b-2 px-5 py-4">
           <h2 className="text-foreground text-sm font-semibold">Export Image</h2>
           <button
@@ -245,6 +189,6 @@ export function ExportModal({canvasRef, onExportComplete}: ExportModalProps) {
           </Button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

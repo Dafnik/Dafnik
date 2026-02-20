@@ -1,6 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {PointerEvent as ReactPointerEvent} from 'react';
-import {getSplitHandlePoint, getSplitRatioFromPoint} from '@/features/editor/lib/split-geometry';
 import type {Point} from '@/features/editor/state/types';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {
@@ -9,11 +8,17 @@ import {
   SPLIT_HANDLE_HIT_RADIUS_PX,
 } from './canvas-interactions/constants';
 import {
-  hasPointerCapture,
-  releasePointerCapture,
-  setPointerCapture,
-} from './canvas-interactions/pointer-capture';
+  beginPointerSession,
+  cancelPointerSessionIfNeeded,
+  endPointerSession,
+  isDifferentActivePointer,
+  isPointerHoverOutsideCapturedSession,
+} from './canvas-interactions/pointer-session';
 import {useSelectionInteractions} from './canvas-interactions/selection';
+import {
+  computeSplitRatioFromClient,
+  isPointerNearSplitHandle as detectPointerNearSplitHandle,
+} from './canvas-interactions/split-drag';
 import {useStrokeSampling} from './canvas-interactions/stroke-sampling';
 import type {UseCanvasInteractionsOptions} from './canvas-interactions/types';
 import {useCanvasWheelZoom} from './canvas-interactions/wheel-zoom';
@@ -96,41 +101,28 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const isPointerNearSplitHandle = useCallback(
     (clientX: number, clientY: number) => {
       const {image2, splitDirection, splitRatio} = useEditorStore.getState();
-      const canvas = canvasRef.current;
-      if (!canvas || !image2 || canvas.width <= 0 || canvas.height <= 0) return false;
-
-      const rect = canvas.getBoundingClientRect();
-      const handlePoint = getSplitHandlePoint(
-        canvas.width,
-        canvas.height,
-        splitDirection,
-        splitRatio / 100,
+      return detectPointerNearSplitHandle(
+        canvasRef.current,
+        clientX,
+        clientY,
+        SPLIT_HANDLE_HIT_RADIUS_PX,
+        {image2, splitDirection, splitRatio},
       );
-
-      const handleClientX = rect.left + (handlePoint.x / canvas.width) * rect.width;
-      const handleClientY = rect.top + (handlePoint.y / canvas.height) * rect.height;
-      const dx = clientX - handleClientX;
-      const dy = clientY - handleClientY;
-
-      return Math.hypot(dx, dy) <= SPLIT_HANDLE_HIT_RADIUS_PX;
     },
     [canvasRef],
   );
 
   const updateSplitRatioFromClient = useCallback(
     (clientX: number, clientY: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
       const {setSplitRatio, splitDirection} = useEditorStore.getState();
-      const coords = getImageCoordsFromClient(clientX, clientY);
-      const nextRatio = getSplitRatioFromPoint(
-        coords.x,
-        coords.y,
-        canvas.width,
-        canvas.height,
+      const nextRatio = computeSplitRatioFromClient(
+        canvasRef.current,
+        clientX,
+        clientY,
         splitDirection,
+        getImageCoordsFromClient,
       );
+      if (nextRatio === null) return;
 
       setSplitRatio(Math.round(nextRatio * 100), {debouncedHistory: true});
     },
@@ -180,8 +172,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       if (event.button === 0 && isPointerNearSplitHandle(event.clientX, event.clientY)) {
         event.preventDefault();
-        activePointerId.current = event.pointerId;
-        setPointerCapture(event.currentTarget, event.pointerId);
+        beginPointerSession(activePointerId, event.currentTarget, event.pointerId);
         setIsDraggingSplit(true);
         setIsOverSplitHandle(true);
         updateSplitRatioFromClient(event.clientX, event.clientY);
@@ -190,8 +181,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       if (event.button === 1 || (event.button === 0 && event.altKey)) {
         event.preventDefault();
-        activePointerId.current = event.pointerId;
-        setPointerCapture(event.currentTarget, event.pointerId);
+        beginPointerSession(activePointerId, event.currentTarget, event.pointerId);
         setIsPanning(true);
         lastPanPos.current = {x: event.clientX, y: event.clientY};
         return;
@@ -207,8 +197,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      activePointerId.current = event.pointerId;
-      setPointerCapture(event.currentTarget, event.pointerId);
+      beginPointerSession(activePointerId, event.currentTarget, event.pointerId);
 
       if (store.activeTool === 'drag') {
         event.preventDefault();
@@ -246,7 +235,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const handlePointerMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       useEditorStore.getState().setIsShiftPressed(event.shiftKey);
-      if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
+      if (isDifferentActivePointer(activePointerId, event.pointerId)) return;
 
       const isOverCanvas = isWithinCanvasBounds(event.clientX, event.clientY);
       const coords = getImageCoordsFromClient(event.clientX, event.clientY);
@@ -312,7 +301,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const handlePointerUp = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       useEditorStore.getState().setIsShiftPressed(event.shiftKey);
-      if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
+      if (isDifferentActivePointer(activePointerId, event.pointerId)) return;
 
       if (isDraggingSplit) {
         setIsDraggingSplit(false);
@@ -339,8 +328,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
         finishActiveStroke(finalPoint);
       }
 
-      activePointerId.current = null;
-      releasePointerCapture(event.currentTarget, event.pointerId);
+      endPointerSession(activePointerId, event.currentTarget, event.pointerId);
     },
     [
       clampPointToCanvas,
@@ -356,8 +344,8 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
   const handlePointerLeave = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
-      if (hasPointerCapture(event.currentTarget, event.pointerId)) return;
+      if (isDifferentActivePointer(activePointerId, event.pointerId)) return;
+      if (isPointerHoverOutsideCapturedSession(event.currentTarget, event.pointerId)) return;
 
       scheduleCursorUpdate(null);
       setIsOverSplitHandle(false);
@@ -376,10 +364,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       handleSelectPointerLeave();
 
-      if (activePointerId.current !== null) {
-        releasePointerCapture(event.currentTarget, event.pointerId);
-        activePointerId.current = null;
-      }
+      cancelPointerSessionIfNeeded(activePointerId, event.currentTarget, event.pointerId);
     },
     [
       finishActiveStroke,
@@ -393,7 +378,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
   const handlePointerCancel = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       useEditorStore.getState().setIsShiftPressed(false);
-      if (activePointerId.current !== null && event.pointerId !== activePointerId.current) return;
+      if (isDifferentActivePointer(activePointerId, event.pointerId)) return;
 
       scheduleCursorUpdate(null);
       setIsOverSplitHandle(false);
@@ -412,10 +397,7 @@ export function useCanvasInteractions({canvasRef, containerRef}: UseCanvasIntera
 
       handleSelectPointerCancel();
 
-      if (activePointerId.current !== null) {
-        releasePointerCapture(event.currentTarget, event.pointerId);
-        activePointerId.current = null;
-      }
+      cancelPointerSessionIfNeeded(activePointerId, event.currentTarget, event.pointerId);
     },
     [
       finishActiveStroke,

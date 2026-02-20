@@ -1,3 +1,5 @@
+import {readJson, writeJson} from '@/features/editor/state/storage/local-storage';
+
 export const AUTO_BLUR_DEFAULTS_STORAGE_KEY = 'editor-auto-blur-defaults-v1';
 
 export interface AutoBlurDefaults {
@@ -42,30 +44,17 @@ function sanitizeDefaults(value: unknown): AutoBlurDefaults {
 }
 
 export function loadAutoBlurDefaults(): AutoBlurDefaults {
-  if (typeof window === 'undefined') {
-    return {email: false, phone: false, customEntries: []};
-  }
-
-  try {
-    const raw = localStorage.getItem(AUTO_BLUR_DEFAULTS_STORAGE_KEY);
-    if (!raw) return {email: false, phone: false, customEntries: []};
-
-    const parsed = JSON.parse(raw);
-    return sanitizeDefaults(parsed);
-  } catch {
-    return {email: false, phone: false, customEntries: []};
-  }
+  return sanitizeDefaults(
+    readJson<unknown>(AUTO_BLUR_DEFAULTS_STORAGE_KEY, {
+      email: false,
+      phone: false,
+      customEntries: [],
+    }),
+  );
 }
 
 export function saveAutoBlurDefaults(defaults: AutoBlurDefaults): void {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const sanitized = sanitizeDefaults(defaults);
-    localStorage.setItem(AUTO_BLUR_DEFAULTS_STORAGE_KEY, JSON.stringify(sanitized));
-  } catch {
-    // Ignore storage errors so editing can continue.
-  }
+  writeJson(AUTO_BLUR_DEFAULTS_STORAGE_KEY, sanitizeDefaults(defaults));
 }
 
 export function normalizeAutoBlurDefaultCustomEntry(value: string): string {

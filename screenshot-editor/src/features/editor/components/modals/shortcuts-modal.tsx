@@ -1,6 +1,7 @@
-import {useEffect} from 'react';
 import {X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
+import {ModalShell} from '@/features/editor/components/modals/modal-shell';
+import {useCloseOnEscape} from '@/features/editor/hooks/use-close-on-escape';
 import {
   EDITOR_SHORTCUTS,
   formatShortcutKeys,
@@ -38,38 +39,13 @@ export function ShortcutsModal() {
   const open = useEditorStore((state) => state.showShortcutsModal);
   const closeShortcutsModal = useEditorStore((state) => state.closeShortcutsModal);
   const shortcutsById = new Map(EDITOR_SHORTCUTS.map((shortcut) => [shortcut.id, shortcut]));
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeShortcutsModal();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [closeShortcutsModal, open]);
+  useCloseOnEscape(open, closeShortcutsModal);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={closeShortcutsModal}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            closeShortcutsModal();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Close shortcuts modal"
-      />
-
-      <div className="bg-card border-border relative w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden border-4 shadow-[10px_10px_0_0_rgba(0,0,0,0.75)]">
+    <ModalShell onClose={closeShortcutsModal} overlayAriaLabel="Close shortcuts modal">
+      <div>
         <div className="border-border flex items-center justify-between border-b-2 px-5 py-4">
           <h2 className="text-foreground text-sm font-semibold">Keyboard Shortcuts</h2>
           <button
@@ -113,6 +89,6 @@ export function ShortcutsModal() {
           </Button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

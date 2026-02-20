@@ -1,6 +1,8 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Check, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
+import {ModalShell} from '@/features/editor/components/modals/modal-shell';
+import {useCloseOnEscape} from '@/features/editor/hooks/use-close-on-escape';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {saveSkipResetProjectConfirmation} from '@/features/editor/state/reset-project-confirmation-storage';
 
@@ -22,6 +24,7 @@ export function ResetProjectModal() {
       continueButtonRef.current?.focus();
     });
   }, [open]);
+  useCloseOnEscape(open, closeResetProjectModal);
 
   const handleConfirm = useCallback(() => {
     if (skipNextTime) {
@@ -30,37 +33,11 @@ export function ResetProjectModal() {
     resetProject();
   }, [resetProject, skipNextTime]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeResetProjectModal();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [closeResetProjectModal, open]);
-
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={closeResetProjectModal}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            closeResetProjectModal();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Close reset project modal"
-      />
-
-      <div className="bg-card border-border relative w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden border-4 shadow-[10px_10px_0_0_rgba(0,0,0,0.75)]">
+    <ModalShell onClose={closeResetProjectModal} overlayAriaLabel="Close reset project modal">
+      <div>
         <div className="border-border flex items-center justify-between border-b-2 px-5 py-4">
           <h2 className="text-foreground text-sm font-semibold">Start a New Project?</h2>
           <button
@@ -112,6 +89,6 @@ export function ResetProjectModal() {
           </Button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

@@ -1,6 +1,7 @@
-import {useEffect} from 'react';
 import {X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
+import {ModalShell} from '@/features/editor/components/modals/modal-shell';
+import {useCloseOnEscape} from '@/features/editor/hooks/use-close-on-escape';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 
 interface LightImageSelectorModalProps {
@@ -17,34 +18,16 @@ export function LightImageSelectorModal({
   const open = useEditorStore((state) => state.showLightSelectorModal);
   const firstImage = useEditorStore((state) => state.selectorFirstImage);
   const secondImage = useEditorStore((state) => state.selectorSecondImage);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel();
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onCancel, open]);
+  useCloseOnEscape(open, onCancel);
 
   if (!open || !firstImage || !secondImage) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onCancel}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') onCancel();
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Close light image selector modal"
-      />
-
-      <div className="bg-card border-border relative w-[900px] max-w-[calc(100vw-2rem)] overflow-hidden border-4 shadow-[10px_10px_0_0_rgba(0,0,0,0.75)]">
+    <ModalShell
+      onClose={onCancel}
+      overlayAriaLabel="Close light image selector modal"
+      containerClassName="w-[900px] max-w-[calc(100vw-2rem)]">
+      <div>
         <div className="border-border flex items-center justify-between border-b-2 px-5 py-4">
           <div className="flex flex-col">
             <h2 className="text-foreground text-sm font-semibold">Select Light Mode Screenshot</h2>
@@ -100,6 +83,6 @@ export function LightImageSelectorModal({
           </Button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

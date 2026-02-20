@@ -1,36 +1,11 @@
 import React from 'react';
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useRef, useState} from 'react';
 import {Upload, ImageIcon} from 'lucide-react';
+import {useOpenUploadShortcut} from '@/features/editor/hooks/use-open-upload-shortcut';
 
 interface DropZoneProps {
   onImagesLoaded: (files: File[]) => void;
-}
-
-function normalizeKey(key: string): string {
-  return key.length === 1 ? key.toLowerCase() : key;
-}
-
-function isOpenUploadShortcut(event: KeyboardEvent): boolean {
-  return (
-    (event.ctrlKey || event.metaKey) && (normalizeKey(event.key) === 'u' || event.code === 'KeyU')
-  );
-}
-
-function isTypingElement(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-
-  const nearest = target.closest<HTMLElement>(
-    'input, textarea, select, [contenteditable=""], [contenteditable="true"]',
-  );
-  if (!nearest) return false;
-
-  if (nearest.isContentEditable) return true;
-  return (
-    nearest instanceof HTMLInputElement ||
-    nearest instanceof HTMLTextAreaElement ||
-    nearest instanceof HTMLSelectElement
-  );
 }
 
 export function DropZone({onImagesLoaded}: DropZoneProps) {
@@ -69,6 +44,10 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
     fileInputRef.current?.click();
   }, []);
 
+  useOpenUploadShortcut({
+    onOpen: () => fileInputRef.current?.click(),
+  });
+
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
@@ -77,19 +56,6 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
     },
     [processFiles],
   );
-
-  useEffect(() => {
-    const handleShortcut = (event: KeyboardEvent) => {
-      if (!isOpenUploadShortcut(event)) return;
-      if (isTypingElement(event.target) || isTypingElement(document.activeElement)) return;
-
-      event.preventDefault();
-      fileInputRef.current?.click();
-    };
-
-    window.addEventListener('keydown', handleShortcut, true);
-    return () => window.removeEventListener('keydown', handleShortcut, true);
-  }, []);
 
   return (
     <div

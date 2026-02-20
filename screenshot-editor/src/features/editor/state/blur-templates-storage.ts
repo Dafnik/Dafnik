@@ -1,31 +1,16 @@
 import type {BlurStroke, BlurTemplate, NormalizedBlurStroke} from './types';
+import {readJson, writeJson} from '@/features/editor/state/storage/local-storage';
 
 export const BLUR_TEMPLATES_STORAGE_KEY = 'editor-blur-templates-v1';
 
 export function loadBlurTemplates(): BlurTemplate[] {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(BLUR_TEMPLATES_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter(isBlurTemplate);
-  } catch {
-    return [];
-  }
+  const parsed = readJson<unknown>(BLUR_TEMPLATES_STORAGE_KEY, []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(isBlurTemplate);
 }
 
 export function saveBlurTemplates(templates: BlurTemplate[]): void {
-  if (typeof window === 'undefined') return;
-
-  try {
-    localStorage.setItem(BLUR_TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
-  } catch {
-    // Ignore storage failures; UI actions still complete in-memory.
-  }
+  writeJson(BLUR_TEMPLATES_STORAGE_KEY, templates);
 }
 
 export function normalizeStrokesForTemplate(

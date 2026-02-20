@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
-import type {KeyboardEvent, ReactNode} from 'react';
+import type {KeyboardEvent} from 'react';
 import {
   Download,
   Fullscreen,
@@ -12,24 +12,10 @@ import {
   Undo2,
 } from 'lucide-react';
 import {Button} from '@/components/ui/button';
-import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
+import {ShortcutTooltip} from '@/features/editor/components/common/shortcut-tooltip';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
 import {loadSkipResetProjectConfirmation} from '@/features/editor/state/reset-project-confirmation-storage';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
-
-interface ShortcutTooltipProps {
-  content: string;
-  children: ReactNode;
-}
-
-function ShortcutTooltip({content, children}: ShortcutTooltipProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent>{content}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 interface EditorToolbarProps {
   isLibraryMode?: boolean;

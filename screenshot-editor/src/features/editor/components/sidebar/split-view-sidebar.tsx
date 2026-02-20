@@ -1,7 +1,8 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useRef} from 'react';
 import type {ChangeEvent} from 'react';
-import {isOpenUploadShortcut, isTypingElement} from '@/features/editor/lib/keyboard';
+import {useOpenUploadShortcut} from '@/features/editor/hooks/use-open-upload-shortcut';
 import {formatShortcutTooltip} from '@/features/editor/lib/shortcut-definitions';
+import {readFileAsDataUrl} from '@/features/editor/services/file-loading';
 import {useEditorStore} from '@/features/editor/state/use-editor-store';
 import {cn} from '@/lib/utils';
 import {SplitViewSection} from './editor-sidebar/split-view-section';
@@ -28,11 +29,14 @@ export function SplitViewSidebar({onAddSecondImage}: SplitViewSidebarProps) {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        onAddSecondImage(loadEvent.target?.result as string, file.name);
-      };
-      reader.readAsDataURL(file);
+      void (async () => {
+        try {
+          const dataUrl = await readFileAsDataUrl(file);
+          onAddSecondImage(dataUrl, file.name);
+        } catch {
+          // Ignore read failures. User can retry selecting the file.
+        }
+      })();
       event.target.value = '';
     },
     [onAddSecondImage],
@@ -42,20 +46,10 @@ export function SplitViewSidebar({onAddSecondImage}: SplitViewSidebarProps) {
   const directionTooltip = formatShortcutTooltip('Cycle direction', ['cycle-split-direction']);
   const placementTooltip = formatShortcutTooltip('Cycle placement', ['toggle-split-placement']);
 
-  useEffect(() => {
-    if (image2) return;
-
-    const handleShortcut = (event: KeyboardEvent) => {
-      if (!isOpenUploadShortcut(event)) return;
-      if (isTypingElement(event.target) || isTypingElement(document.activeElement)) return;
-
-      event.preventDefault();
-      fileInputRef.current?.click();
-    };
-
-    window.addEventListener('keydown', handleShortcut, true);
-    return () => window.removeEventListener('keydown', handleShortcut, true);
-  }, [image2]);
+  useOpenUploadShortcut({
+    enabled: !image2,
+    onOpen: () => fileInputRef.current?.click(),
+  });
 
   return (
     <aside

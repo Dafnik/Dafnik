@@ -1,3 +1,5 @@
+import {readJson, writeJson} from '@/features/editor/state/storage/local-storage';
+
 export const AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY = 'editor-auto-blur-custom-text-v1';
 
 function sanitizeCustomTextEntries(value: unknown): string[] {
@@ -23,26 +25,9 @@ function sanitizeCustomTextEntries(value: unknown): string[] {
 }
 
 export function loadAutoBlurCustomTexts(): string[] {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    return sanitizeCustomTextEntries(parsed);
-  } catch {
-    return [];
-  }
+  return sanitizeCustomTextEntries(readJson<unknown>(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY, []));
 }
 
 export function saveAutoBlurCustomTexts(entries: string[]): void {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const sanitized = sanitizeCustomTextEntries(entries);
-    localStorage.setItem(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY, JSON.stringify(sanitized));
-  } catch {
-    // Ignore storage errors so editing can continue.
-  }
+  writeJson(AUTO_BLUR_CUSTOM_TEXT_STORAGE_KEY, sanitizeCustomTextEntries(entries));
 }

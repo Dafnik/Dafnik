@@ -1,5 +1,6 @@
 import {useMemo, useRef} from 'react';
 import {Button} from '@/components/ui/button';
+import {LibraryPairCard} from '@/features/library/components/library-pair-card';
 import {ReviewQueue} from '@/features/library/components/review-queue';
 import type {LibraryImage, LibraryPair, LibrarySession} from '@/features/library/types';
 
@@ -21,66 +22,6 @@ interface LibraryManagerProps {
   appendProgress?: {processed: number; total: number} | null;
   errorMessage?: string | null;
   onDismissError?: () => void;
-}
-
-function PairCard({
-  pair,
-  onOpenPair,
-  onDeletePairImages,
-  onUnpairPair,
-}: {
-  pair: LibraryPair;
-  onOpenPair: (pair: LibraryPair) => void;
-  onDeletePairImages: (pairId: string) => void;
-  onUnpairPair?: (pairId: string) => void;
-}) {
-  return (
-    <article key={pair.id} className="border-border bg-card border-2 p-3">
-      <header className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold tracking-wide uppercase">{pair.reason}</span>
-        <span className="text-muted-foreground text-xs tabular-nums">
-          {Math.round(pair.score * 100)}%
-        </span>
-      </header>
-
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        <figure className="border-border bg-secondary/30 border p-1">
-          <img
-            src={pair.darkImage.dataUrl}
-            alt={`${pair.darkImage.fileName} dark preview`}
-            className="h-32 w-full object-contain"
-          />
-          <figcaption className="text-muted-foreground mt-1 truncate text-[11px]">
-            Dark: {pair.darkImage.fileName}
-          </figcaption>
-        </figure>
-        <figure className="border-border bg-secondary/30 border p-1">
-          <img
-            src={pair.lightImage.dataUrl}
-            alt={`${pair.lightImage.fileName} light preview`}
-            className="h-32 w-full object-contain"
-          />
-          <figcaption className="text-muted-foreground mt-1 truncate text-[11px]">
-            Light: {pair.lightImage.fileName}
-          </figcaption>
-        </figure>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => onOpenPair(pair)}>
-          Open pair
-        </Button>
-        {onUnpairPair ? (
-          <Button variant="outline" size="sm" onClick={() => onUnpairPair(pair.id)}>
-            Unpair
-          </Button>
-        ) : null}
-        <Button variant="outline" size="sm" onClick={() => onDeletePairImages(pair.id)}>
-          Delete images
-        </Button>
-      </div>
-    </article>
-  );
 }
 
 export function LibraryManager({
@@ -198,12 +139,28 @@ export function LibraryManager({
           ) : (
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {activePairs.map((pair) => (
-                <PairCard
+                <LibraryPairCard
                   key={pair.id}
                   pair={pair}
-                  onOpenPair={onOpenPair}
-                  onDeletePairImages={onDeletePairImages}
-                  onUnpairPair={onUnpairPair}
+                  reasonLabel={pair.reason}
+                  actions={
+                    <>
+                      <Button size="sm" onClick={() => onOpenPair(pair)}>
+                        Open pair
+                      </Button>
+                      {onUnpairPair ? (
+                        <Button variant="outline" size="sm" onClick={() => onUnpairPair(pair.id)}>
+                          Unpair
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDeletePairImages(pair.id)}>
+                        Delete images
+                      </Button>
+                    </>
+                  }
                 />
               ))}
             </div>
@@ -294,11 +251,23 @@ export function LibraryManager({
           ) : (
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {donePairs.map((pair) => (
-                <PairCard
+                <LibraryPairCard
                   key={pair.id}
                   pair={pair}
-                  onOpenPair={onOpenPair}
-                  onDeletePairImages={onDeletePairImages}
+                  reasonLabel={pair.reason}
+                  actions={
+                    <>
+                      <Button size="sm" onClick={() => onOpenPair(pair)}>
+                        Open pair
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDeletePairImages(pair.id)}>
+                        Delete images
+                      </Button>
+                    </>
+                  }
                 />
               ))}
             </div>

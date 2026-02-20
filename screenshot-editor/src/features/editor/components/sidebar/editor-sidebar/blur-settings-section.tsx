@@ -1,24 +1,11 @@
-import {
-  AtSign,
-  Brush,
-  Check,
-  Droplets,
-  Eye,
-  Grid3X3,
-  Loader2,
-  Phone,
-  Square,
-  Trash2,
-  Type,
-  X,
-} from 'lucide-react';
-import {useEffect, useRef, useState} from 'react';
+import {Droplets, Eye, Trash2} from 'lucide-react';
 import {Button} from '@/components/ui/button';
-import {Label} from '@/components/ui/label';
-import {Slider} from '@/components/ui/slider';
-import {OPEN_AUTO_BLUR_MENU_EVENT} from '@/features/editor/lib/keyboard';
 import type {BlurStrokeShape, BlurType} from '@/features/editor/state/types';
-import {ShortcutTooltip} from './shortcut-tooltip';
+import {ShortcutTooltip} from '@/features/editor/components/common/shortcut-tooltip';
+import {AutoBlurMenu} from './auto-blur-menu';
+import {BlurModeToggle} from './blur-mode-toggle';
+import {BlurTypeToggle} from './blur-type-toggle';
+import {LabeledSliderControl} from './labeled-slider-control';
 
 interface BlurSettingsSectionProps {
   modeTooltip: string;
@@ -105,100 +92,6 @@ export function BlurSettingsSection({
   autoBlurTooltip,
   autoBlurStatus,
 }: BlurSettingsSectionProps) {
-  const [isAutoBlurMenuOpen, setIsAutoBlurMenuOpen] = useState(false);
-  const [customText, setCustomText] = useState('');
-  const autoBlurMenuRef = useRef<HTMLDivElement | null>(null);
-  const customTextInputRef = useRef<HTMLInputElement | null>(null);
-
-  const focusCustomTextInput = () => {
-    window.requestAnimationFrame(() => {
-      customTextInputRef.current?.focus();
-    });
-  };
-
-  const openAutoBlurMenuAndFocus = () => {
-    if (autoBlurDisabled) return;
-    setIsAutoBlurMenuOpen(true);
-    focusCustomTextInput();
-  };
-
-  useEffect(() => {
-    if (!isAutoBlurMenuOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!autoBlurMenuRef.current?.contains(event.target as Node)) {
-        setIsAutoBlurMenuOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsAutoBlurMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('keydown', handleEscape);
-    };
-  }, [isAutoBlurMenuOpen]);
-
-  useEffect(() => {
-    const handleOpenAutoBlurMenu = () => {
-      openAutoBlurMenuAndFocus();
-    };
-
-    window.addEventListener(OPEN_AUTO_BLUR_MENU_EVENT, handleOpenAutoBlurMenu);
-    return () => window.removeEventListener(OPEN_AUTO_BLUR_MENU_EVENT, handleOpenAutoBlurMenu);
-  }, [autoBlurDisabled]);
-
-  const handleAutoBlurEmails = () => {
-    setIsAutoBlurMenuOpen(false);
-    onAutoBlurEmails();
-  };
-
-  const handleAutoBlurPhoneNumbers = () => {
-    setIsAutoBlurMenuOpen(false);
-    onAutoBlurPhoneNumbers();
-  };
-
-  const handleAutoBlurCustomText = () => {
-    const trimmed = customText.trim();
-    if (!trimmed) return;
-
-    setCustomText('');
-    setIsAutoBlurMenuOpen(false);
-    onAutoBlurCustomText(trimmed);
-  };
-
-  const renderApplyToggle = ({
-    label,
-    pressed,
-    onToggle,
-  }: {
-    label: string;
-    pressed: boolean;
-    onToggle: () => void;
-  }) => (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={pressed}
-      onClick={onToggle}
-      className="border-border hover:bg-secondary/70 flex h-8 w-8 items-center justify-center border-2 transition-colors">
-      <span
-        className={`flex h-4 w-4 items-center justify-center border ${
-          pressed
-            ? 'bg-primary/15 border-primary text-primary'
-            : 'border-border bg-background text-transparent'
-        }`}>
-        <Check className="h-3 w-3" />
-      </span>
-    </button>
-  );
-
   return (
     <div className="border-border border-b-2 p-4">
       <div className="mb-4 flex items-center justify-between gap-2">
@@ -220,164 +113,24 @@ export function BlurSettingsSection({
               <Eye className="h-3.5 w-3.5" />
             </Button>
           </ShortcutTooltip>
-          <div className="relative" ref={autoBlurMenuRef}>
-            <ShortcutTooltip content={autoBlurTooltip}>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                aria-label="Open auto blur menu"
-                aria-expanded={isAutoBlurMenuOpen}
-                aria-haspopup="menu"
-                onClick={() =>
-                  setIsAutoBlurMenuOpen((value) => {
-                    const nextValue = !value;
-                    if (nextValue) {
-                      focusCustomTextInput();
-                    }
-                    return nextValue;
-                  })
-                }
-                disabled={autoBlurDisabled}
-                className="h-7 w-7">
-                {isAutoBlurPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <AtSign className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </ShortcutTooltip>
-
-            {isAutoBlurMenuOpen ? (
-              <div
-                role="menu"
-                className="bg-background border-border absolute right-0 z-20 mt-1 w-64 border-2 p-2 shadow-[3px_3px_0_0_rgba(0,0,0,0.68)]">
-                <div className="border-border mb-2 border-b pb-2">
-                  <div className="mb-1 flex items-center justify-between">
-                    <Label className="text-muted-foreground text-[11px]">Auto blur strength</Label>
-                    <span className="text-muted-foreground text-[11px] tabular-nums">
-                      {autoBlurStrength}
-                    </span>
-                  </div>
-                  <Slider
-                    value={[autoBlurStrength]}
-                    onValueChange={([value]) => onAutoBlurStrengthChange(value)}
-                    min={1}
-                    max={30}
-                    step={1}
-                    disabled={isAutoBlurPending}
-                    className="w-full"
-                    aria-label="Auto blur strength"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      aria-label="Auto blur email addresses"
-                      disabled={isAutoBlurPending}
-                      onClick={handleAutoBlurEmails}
-                      className="h-8 min-w-0 flex-1 justify-start text-xs">
-                      <AtSign className="h-3 w-3" />
-                      Email addresses
-                    </Button>
-                    {renderApplyToggle({
-                      label: 'Apply email auto blur on document load',
-                      pressed: autoBlurApplyOnLoadEmail,
-                      onToggle: onToggleAutoBlurApplyOnLoadEmail,
-                    })}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      aria-label="Auto blur phone numbers"
-                      disabled={isAutoBlurPending}
-                      onClick={handleAutoBlurPhoneNumbers}
-                      className="h-8 min-w-0 flex-1 justify-start text-xs">
-                      <Phone className="h-3 w-3" />
-                      Phone numbers
-                    </Button>
-                    {renderApplyToggle({
-                      label: 'Apply phone auto blur on document load',
-                      pressed: autoBlurApplyOnLoadPhone,
-                      onToggle: onToggleAutoBlurApplyOnLoadPhone,
-                    })}
-                  </div>
-                </div>
-
-                <div className="border-border mt-2 border-t pt-2">
-                  <Label className="text-muted-foreground mb-1 block text-[11px]">
-                    Custom text
-                  </Label>
-                  <div className="flex gap-1">
-                    <input
-                      ref={customTextInputRef}
-                      type="text"
-                      value={customText}
-                      onChange={(event) => setCustomText(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault();
-                          handleAutoBlurCustomText();
-                        }
-                      }}
-                      placeholder="Enter text"
-                      className="bg-secondary text-foreground border-border focus:ring-primary placeholder:text-muted-foreground h-8 min-w-0 flex-1 border-2 px-2 text-xs outline-none focus:ring-1"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      aria-label="Run auto blur for custom text"
-                      disabled={isAutoBlurPending || !customText.trim()}
-                      onClick={handleAutoBlurCustomText}
-                      className="h-8 px-2 text-xs">
-                      <Type className="h-3 w-3" />
-                      Run
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-2 space-y-1">
-                  {savedAutoBlurCustomTexts.length === 0 ? (
-                    <p className="text-muted-foreground text-[10px]">No saved custom text yet.</p>
-                  ) : (
-                    savedAutoBlurCustomTexts.map((entry) => (
-                      <div key={entry.toLowerCase()} className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          aria-label={`Auto blur saved text ${entry}`}
-                          disabled={isAutoBlurPending}
-                          onClick={() => {
-                            setIsAutoBlurMenuOpen(false);
-                            onAutoBlurCustomText(entry);
-                          }}
-                          className="bg-secondary text-secondary-foreground hover:bg-secondary/80 h-7 min-w-0 flex-1 truncate rounded px-2 text-left text-[11px] disabled:cursor-not-allowed disabled:opacity-50">
-                          {entry}
-                        </button>
-                        {renderApplyToggle({
-                          label: `Apply saved text ${entry} auto blur on document load`,
-                          pressed: isAutoBlurApplyOnLoadCustomText(entry),
-                          onToggle: () => onToggleAutoBlurApplyOnLoadCustomText(entry),
-                        })}
-                        <button
-                          type="button"
-                          aria-label={`Delete saved text ${entry}`}
-                          onClick={() => onDeleteAutoBlurCustomText(entry)}
-                          className="text-muted-foreground hover:text-destructive rounded p-1 transition-colors">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <AutoBlurMenu
+            autoBlurTooltip={autoBlurTooltip}
+            autoBlurDisabled={autoBlurDisabled}
+            isAutoBlurPending={isAutoBlurPending}
+            autoBlurStrength={autoBlurStrength}
+            onAutoBlurStrengthChange={onAutoBlurStrengthChange}
+            onAutoBlurEmails={onAutoBlurEmails}
+            onAutoBlurPhoneNumbers={onAutoBlurPhoneNumbers}
+            onAutoBlurCustomText={onAutoBlurCustomText}
+            onDeleteAutoBlurCustomText={onDeleteAutoBlurCustomText}
+            autoBlurApplyOnLoadEmail={autoBlurApplyOnLoadEmail}
+            autoBlurApplyOnLoadPhone={autoBlurApplyOnLoadPhone}
+            isAutoBlurApplyOnLoadCustomText={isAutoBlurApplyOnLoadCustomText}
+            onToggleAutoBlurApplyOnLoadEmail={onToggleAutoBlurApplyOnLoadEmail}
+            onToggleAutoBlurApplyOnLoadPhone={onToggleAutoBlurApplyOnLoadPhone}
+            onToggleAutoBlurApplyOnLoadCustomText={onToggleAutoBlurApplyOnLoadCustomText}
+            savedAutoBlurCustomTexts={savedAutoBlurCustomTexts}
+          />
         </div>
       </div>
 
@@ -386,138 +139,44 @@ export function BlurSettingsSection({
       ) : null}
 
       <div className="space-y-4">
-        <div>
-          <ShortcutTooltip content={modeTooltip}>
-            <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
-              Mode
-            </Label>
-          </ShortcutTooltip>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              disabled={!canEditBlurMode}
-              onClick={() => onBlurStrokeShapeChange('brush')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                blurStrokeShape === 'brush'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-              }`}>
-              <Brush className="h-3 w-3" />
-              Brush
-            </button>
-            <button
-              type="button"
-              disabled={!canEditBlurMode}
-              onClick={() => onBlurStrokeShapeChange('box')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                blurStrokeShape === 'box'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-              }`}>
-              <Square className="h-3 w-3" />
-              Area
-            </button>
-          </div>
-        </div>
+        <BlurModeToggle
+          modeTooltip={modeTooltip}
+          canEditBlurMode={canEditBlurMode}
+          blurStrokeShape={blurStrokeShape}
+          onBlurStrokeShapeChange={onBlurStrokeShapeChange}
+        />
 
-        <div>
-          <ShortcutTooltip content={blurTypeTooltip}>
-            <Label className="text-muted-foreground mb-2 block w-fit cursor-help text-xs">
-              Blur Type
-            </Label>
-          </ShortcutTooltip>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              disabled={!canEditBlurType}
-              onClick={() => onBlurTypeChange('normal')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                displayedBlurType === 'normal'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-              }`}>
-              <Droplets className="h-3 w-3" />
-              Normal
-            </button>
-            <button
-              type="button"
-              disabled={!canEditBlurType}
-              onClick={() => onBlurTypeChange('pixelated')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                displayedBlurType === 'pixelated'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:hover:bg-secondary'
-              }`}>
-              <Grid3X3 className="h-3 w-3" />
-              Pixelated
-            </button>
-          </div>
-        </div>
+        <BlurTypeToggle
+          blurTypeTooltip={blurTypeTooltip}
+          canEditBlurType={canEditBlurType}
+          displayedBlurType={displayedBlurType}
+          onBlurTypeChange={onBlurTypeChange}
+        />
 
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <ShortcutTooltip content={strengthTooltip}>
-              <Label
-                className={`text-xs ${canEditStrength ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-                Strength
-              </Label>
-            </ShortcutTooltip>
-            <span
-              className={`text-xs tabular-nums ${canEditStrength ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-              {displayedStrength}
-            </span>
-          </div>
-          <ShortcutTooltip content={strengthTooltip}>
-            <div
-              className={`rounded-md px-1 py-1 transition-opacity ${
-                canEditStrength
-                  ? ''
-                  : 'bg-muted/35 border-border/70 border border-dashed opacity-55'
-              }`}>
-              <Slider
-                value={[displayedStrength]}
-                onValueChange={([value]) => onStrengthChange(value)}
-                onValueCommit={([value]) => onStrengthCommit(value)}
-                min={1}
-                max={30}
-                step={1}
-                disabled={!canEditStrength}
-                className="w-full"
-              />
-            </div>
-          </ShortcutTooltip>
-        </div>
+        <LabeledSliderControl
+          label="Strength"
+          tooltip={strengthTooltip}
+          valueText={String(displayedStrength)}
+          value={displayedStrength}
+          onValueChange={onStrengthChange}
+          onValueCommit={onStrengthCommit}
+          min={1}
+          max={30}
+          step={1}
+          disabled={!canEditStrength}
+        />
 
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <ShortcutTooltip content={radiusTooltip}>
-              <Label
-                className={`text-xs ${canEditRadius ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-                Radius
-              </Label>
-            </ShortcutTooltip>
-            <span
-              className={`text-xs tabular-nums ${canEditRadius ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-              {brushRadius}px
-            </span>
-          </div>
-          <ShortcutTooltip content={radiusTooltip}>
-            <div
-              className={`rounded-md px-1 py-1 transition-opacity ${
-                canEditRadius ? '' : 'bg-muted/35 border-border/70 border border-dashed opacity-55'
-              }`}>
-              <Slider
-                value={[brushRadius]}
-                onValueChange={([value]) => onRadiusChange(value)}
-                min={5}
-                max={100}
-                step={1}
-                disabled={!canEditRadius}
-                className="w-full"
-              />
-            </div>
-          </ShortcutTooltip>
-        </div>
+        <LabeledSliderControl
+          label="Radius"
+          tooltip={radiusTooltip}
+          valueText={`${brushRadius}px`}
+          value={brushRadius}
+          onValueChange={onRadiusChange}
+          min={5}
+          max={100}
+          step={1}
+          disabled={!canEditRadius}
+        />
 
         <ShortcutTooltip content="Reset all blurs">
           <Button
