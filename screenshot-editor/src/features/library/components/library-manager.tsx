@@ -1,5 +1,6 @@
 import {useMemo, useRef} from 'react';
 import {Button} from '@/components/ui/button';
+import {Slider} from '@/components/ui/slider';
 import {LibraryPairCard} from '@/features/library/components/library-pair-card';
 import {ReviewQueue} from '@/features/library/components/review-queue';
 import type {LibraryImage, LibraryPair, LibrarySession} from '@/features/library/types';
@@ -20,6 +21,8 @@ interface LibraryManagerProps {
   onAddScreenshots: (files: File[]) => void;
   isAppendingScreenshots: boolean;
   appendProgress?: {processed: number; total: number} | null;
+  autoMatchThresholdPercent: number;
+  onAutoMatchThresholdPercentChange: (nextPercent: number) => void;
   errorMessage?: string | null;
   onDismissError?: () => void;
 }
@@ -40,6 +43,8 @@ export function LibraryManager({
   onAddScreenshots,
   isAppendingScreenshots,
   appendProgress,
+  autoMatchThresholdPercent,
+  onAutoMatchThresholdPercentChange,
   errorMessage,
   onDismissError,
 }: LibraryManagerProps) {
@@ -66,56 +71,80 @@ export function LibraryManager({
   );
 
   return (
-    <div className="bg-background min-h-screen w-screen overflow-auto px-5 py-5">
+    <div className="bg-background h-screen w-screen overflow-y-auto px-5 py-5">
       <div className="mx-auto max-w-7xl space-y-8">
-        <header className="border-border bg-card flex flex-wrap items-center justify-between gap-3 border-2 p-4">
-          <div>
-            <h1 className="text-foreground text-lg font-semibold">Screenshot Library Pairing</h1>
-            <p className="text-muted-foreground text-sm">
-              Auto-grouped pairs are ready. Borderline pairs stay in review.
-            </p>
+        <header className="border-border bg-card flex flex-wrap items-start justify-between gap-3 border-2 p-4">
+          <div className="space-y-2">
+            <h1 className="text-foreground text-lg font-semibold">Screenshot Library</h1>
+            <div className="flex flex-wrap items-end gap-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => addScreenshotsInputRef.current?.click()}
+                disabled={isAppendingScreenshots}>
+                Add screenshots
+              </Button>
+              <input
+                ref={addScreenshotsInputRef}
+                data-testid="library-add-screenshots-input"
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  if (!event.target.files) return;
+                  onAddScreenshots(Array.from(event.target.files));
+                  event.currentTarget.value = '';
+                }}
+              />
+              <Button variant="ghost" size="sm" onClick={onClearLibrary}>
+                Clear library
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="border-border bg-secondary/40 border px-2 py-1">
-              Active: {activePairs.length}
-            </span>
-            <span className="border-border bg-secondary/40 border px-2 py-1">
-              Done: {donePairs.length}
-            </span>
-            <span className="border-border bg-secondary/40 border px-2 py-1">
-              Review: {session.reviewPairs.length}
-            </span>
-            <span className="border-border bg-secondary/40 border px-2 py-1">
-              Unmatched: {unmatchedImages.length}
-            </span>
-            {appendProgress ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="border-border bg-secondary/40 border px-2 py-1">
-                Adding screenshots: {appendProgress.processed}/{appendProgress.total}
+                Active: {activePairs.length}
               </span>
-            ) : null}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => addScreenshotsInputRef.current?.click()}
-              disabled={isAppendingScreenshots}>
-              Add screenshots
-            </Button>
-            <input
-              ref={addScreenshotsInputRef}
-              data-testid="library-add-screenshots-input"
-              type="file"
-              multiple
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => {
-                if (!event.target.files) return;
-                onAddScreenshots(Array.from(event.target.files));
-                event.currentTarget.value = '';
-              }}
-            />
-            <Button variant="ghost" size="sm" onClick={onClearLibrary}>
-              Clear library
-            </Button>
+              <span className="border-border bg-secondary/40 border px-2 py-1">
+                Done: {donePairs.length}
+              </span>
+              <span className="border-border bg-secondary/40 border px-2 py-1">
+                Review: {session.reviewPairs.length}
+              </span>
+              <span className="border-border bg-secondary/40 border px-2 py-1">
+                Unmatched: {unmatchedImages.length}
+              </span>
+              {appendProgress ? (
+                <span className="border-border bg-secondary/40 border px-2 py-1">
+                  Adding screenshots: {appendProgress.processed}/{appendProgress.total}
+                </span>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold tracking-wide uppercase">
+                  Manual review threshold
+                </span>
+                <span className="text-muted-foreground tabular-nums">
+                  {autoMatchThresholdPercent}%
+                </span>
+              </div>
+              <Slider
+                aria-label="Manual review threshold percentage"
+                min={72}
+                max={100}
+                step={1}
+                value={[autoMatchThresholdPercent]}
+                onValueChange={(values) => {
+                  const nextValue = values[0];
+                  if (typeof nextValue === 'number') {
+                    onAutoMatchThresholdPercentChange(nextValue);
+                  }
+                }}
+              />
+            </div>
           </div>
         </header>
 

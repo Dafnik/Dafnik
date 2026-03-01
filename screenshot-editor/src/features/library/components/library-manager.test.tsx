@@ -92,6 +92,8 @@ function renderLibrary(selectedUnmatchedImageIds: string[] = []) {
       onAddScreenshots={() => {}}
       isAppendingScreenshots={false}
       appendProgress={null}
+      autoMatchThresholdPercent={85}
+      onAutoMatchThresholdPercentChange={() => {}}
       onClearLibrary={() => {}}
     />,
   );
@@ -134,6 +136,8 @@ describe('LibraryManager', () => {
         onAddScreenshots={() => {}}
         isAppendingScreenshots={false}
         appendProgress={null}
+        autoMatchThresholdPercent={85}
+        onAutoMatchThresholdPercentChange={() => {}}
         onClearLibrary={() => {}}
       />,
     );
@@ -181,6 +185,8 @@ describe('LibraryManager', () => {
         onAddScreenshots={() => {}}
         isAppendingScreenshots={false}
         appendProgress={null}
+        autoMatchThresholdPercent={85}
+        onAutoMatchThresholdPercentChange={() => {}}
         onClearLibrary={() => {}}
       />,
     );
@@ -214,6 +220,8 @@ describe('LibraryManager', () => {
         onAddScreenshots={onAddScreenshots}
         isAppendingScreenshots={false}
         appendProgress={null}
+        autoMatchThresholdPercent={85}
+        onAutoMatchThresholdPercentChange={() => {}}
         onClearLibrary={() => {}}
       />,
     );
@@ -245,11 +253,15 @@ describe('LibraryManager', () => {
         onAddScreenshots={() => {}}
         isAppendingScreenshots
         appendProgress={{processed: 2, total: 5}}
+        autoMatchThresholdPercent={85}
+        onAutoMatchThresholdPercentChange={() => {}}
         onClearLibrary={() => {}}
       />,
     );
 
     expect(screen.getByText('Adding screenshots: 2/5')).toBeInTheDocument();
+    expect(screen.getByText('Manual review threshold')).toBeInTheDocument();
+    expect(screen.getByText('85%')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Add screenshots'})).toBeDisabled();
   });
 });

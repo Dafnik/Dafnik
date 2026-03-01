@@ -116,9 +116,13 @@ describe('EditorRoot library flow', () => {
 
     await user.upload(input, files);
 
-    expect(await screen.findByText('Screenshot Library Pairing')).toBeInTheDocument();
+    expect(await screen.findByText('Screenshot Library')).toBeInTheDocument();
     expect(extractFeatures).toHaveBeenCalledTimes(1);
     expect(buildLibraryPairs).toHaveBeenCalledTimes(1);
+    expect(buildLibraryPairs).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({autoPairThreshold: 0.85}),
+    );
 
     await user.click(screen.getByRole('button', {name: 'Open pair'}));
     expect(await screen.findByText('Screenshot Editor')).toBeInTheDocument();

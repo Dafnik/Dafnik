@@ -2,7 +2,9 @@ import {describe, expect, it} from 'vitest';
 import {
   acceptReviewPair,
   appendAndRecomputeSession,
+  buildSessionFromImages,
   rejectReviewPair,
+  recomputeSessionPairs,
   removeImagesFromSession,
   unpairLibraryPair,
 } from '@/features/library/services/library-session-updates';
@@ -35,6 +37,14 @@ function makePair(id: string, darkImage: LibraryImage, lightImage: LibraryImage)
     reason: 'high match',
     completedAt: null,
   };
+}
+
+function makePartialHash(differentBytes: number): Uint8Array {
+  const hash = new Uint8Array(32);
+  for (let i = 0; i < differentBytes; i += 1) {
+    hash[i] = 255;
+  }
+  return hash;
 }
 
 describe('library session updates', () => {
@@ -101,5 +111,20 @@ describe('library session updates', () => {
     );
     expect(next.images.some((image) => image.id.includes('append-0-'))).toBe(true);
     expect(next.images.some((image) => image.id.includes('append-1-'))).toBe(true);
+  });
+
+  it('recomputes active pairing when auto-match threshold changes', () => {
+    const darkBase = makeImage('dark-threshold', 0);
+    const lightBase = makeImage('light-threshold', 255);
+    const dark = {...darkBase, features: {...darkBase.features, edgeHash: new Uint8Array(32)}};
+    const light = {...lightBase, features: {...lightBase.features, edgeHash: makePartialHash(8)}};
+
+    const relaxed = buildSessionFromImages([dark, light], {autoPairThreshold: 0.8});
+    expect(relaxed.pairs).toHaveLength(1);
+    expect(relaxed.reviewPairs).toHaveLength(0);
+
+    const stricter = recomputeSessionPairs(relaxed, {autoPairThreshold: 0.85});
+    expect(stricter.pairs).toHaveLength(0);
+    expect(stricter.reviewPairs).toHaveLength(1);
   });
 });

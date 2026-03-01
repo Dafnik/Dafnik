@@ -1,5 +1,10 @@
 import {buildLibraryPairs, scoreImagePair} from '@/features/library/services/pair-matching';
-import type {LibraryImage, LibraryPair, LibrarySession} from '@/features/library/types';
+import type {
+  LibraryImage,
+  LibraryPair,
+  LibrarySession,
+  MatchConfig,
+} from '@/features/library/types';
 
 function upsertImageIds(current: string[], idsToAdd: string[]): string[] {
   const values = new Set(current);
@@ -16,8 +21,35 @@ function withResetCompletion<T extends {completedAt: string | null}>(item: T): T
   };
 }
 
-export function buildSessionFromImages(images: LibraryImage[]): LibrarySession {
-  const pairing = buildLibraryPairs(images);
+function buildSessionWithPairing(
+  donePairs: LibraryPair[],
+  doneImages: LibraryImage[],
+  recomputePool: LibraryImage[],
+  partialConfig: Partial<MatchConfig> = {},
+): LibrarySession {
+  const pairing = buildLibraryPairs(recomputePool, partialConfig);
+  return {
+    images: [...doneImages, ...recomputePool],
+    pairs: [
+      ...donePairs,
+      ...pairing.autoPairs.map((pair) => ({
+        ...pair,
+        completedAt: null,
+      })),
+    ],
+    reviewPairs: pairing.reviewPairs.map((review) => ({
+      ...review,
+      pair: {...review.pair, completedAt: null},
+    })),
+    unmatchedImageIds: pairing.unmatchedImageIds,
+  };
+}
+
+export function buildSessionFromImages(
+  images: LibraryImage[],
+  partialConfig: Partial<MatchConfig> = {},
+): LibrarySession {
+  const pairing = buildLibraryPairs(images, partialConfig);
   return {
     images,
     pairs: pairing.autoPairs.map((pair) => withResetCompletion(pair)),
@@ -171,6 +203,7 @@ export function appendAndRecomputeSession(
   session: LibrarySession,
   extractedImages: LibraryImage[],
   idPrefix = `app-${Date.now()}`,
+  partialConfig: Partial<MatchConfig> = {},
 ): LibrarySession {
   const donePairs = session.pairs.filter((pair) => pair.completedAt !== null);
   const doneImageIds = new Set<string>();
@@ -198,21 +231,21 @@ export function appendAndRecomputeSession(
   const doneImages = session.images.filter((image) => doneImageIds.has(image.id));
   const recomputeBaseImages = session.images.filter((image) => !doneImageIds.has(image.id));
   const recomputePool = [...recomputeBaseImages, ...appendedImages];
-  const pairing = buildLibraryPairs(recomputePool);
+  return buildSessionWithPairing(donePairs, doneImages, recomputePool, partialConfig);
+}
 
-  return {
-    images: [...doneImages, ...recomputePool],
-    pairs: [
-      ...donePairs,
-      ...pairing.autoPairs.map((pair) => ({
-        ...pair,
-        completedAt: null,
-      })),
-    ],
-    reviewPairs: pairing.reviewPairs.map((review) => ({
-      ...review,
-      pair: {...review.pair, completedAt: null},
-    })),
-    unmatchedImageIds: pairing.unmatchedImageIds,
-  };
+export function recomputeSessionPairs(
+  session: LibrarySession,
+  partialConfig: Partial<MatchConfig> = {},
+): LibrarySession {
+  const donePairs = session.pairs.filter((pair) => pair.completedAt !== null);
+  const doneImageIds = new Set<string>();
+  for (const pair of donePairs) {
+    doneImageIds.add(pair.darkImage.id);
+    doneImageIds.add(pair.lightImage.id);
+  }
+
+  const doneImages = session.images.filter((image) => doneImageIds.has(image.id));
+  const recomputePool = session.images.filter((image) => !doneImageIds.has(image.id));
+  return buildSessionWithPairing(donePairs, doneImages, recomputePool, partialConfig);
 }

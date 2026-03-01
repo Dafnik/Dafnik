@@ -10,7 +10,7 @@ import type {
 const DEFAULT_CONFIG: MatchConfig = {
   sizeToleranceRatio: 0.03,
   aspectToleranceRatio: 0.03,
-  autoPairThreshold: 0.8,
+  autoPairThreshold: 0.85,
   reviewPairThreshold: 0.72,
   minLuminanceDelta: 12,
 };

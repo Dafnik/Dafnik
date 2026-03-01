@@ -11,6 +11,7 @@ import {
   buildSessionFromImages,
   markPairCompleted,
   rejectReviewPair,
+  recomputeSessionPairs,
   removeImagesFromSession,
   unpairLibraryPair,
 } from '@/features/library/services/library-session-updates';
@@ -22,6 +23,9 @@ export interface AnalysisProgress {
 }
 
 export type EditorSource = {mode: 'library'; pairId: string} | {mode: 'direct'} | null;
+const DEFAULT_AUTO_MATCH_THRESHOLD_PERCENT = 85;
+const MIN_AUTO_MATCH_THRESHOLD_PERCENT = 72;
+const MAX_AUTO_MATCH_THRESHOLD_PERCENT = 100;
 
 interface UseLibrarySessionControllerOptions {
   lightImageSide: LightImageSide;
@@ -39,6 +43,9 @@ export function useLibrarySessionController({
   const [appendProgress, setAppendProgress] = useState<AnalysisProgress | null>(null);
   const [isAppendingScreenshots, setIsAppendingScreenshots] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [autoMatchThresholdPercent, setAutoMatchThresholdPercent] = useState(
+    DEFAULT_AUTO_MATCH_THRESHOLD_PERCENT,
+  );
   const [selectedUnmatchedImageIds, setSelectedUnmatchedImageIds] = useState<string[]>([]);
   const librarySessionRef = useRef<LibrarySession | null>(null);
 
@@ -67,7 +74,11 @@ export function useLibrarySessionController({
             concurrency: 4,
             onProgress: (processed, total) => setAnalysisProgress({processed, total}),
           });
-          setLibrarySession(buildSessionFromImages(images));
+          setLibrarySession(
+            buildSessionFromImages(images, {
+              autoPairThreshold: autoMatchThresholdPercent / 100,
+            }),
+          );
           setSelectedUnmatchedImageIds([]);
           setActiveEditorSource(null);
         } catch {
@@ -82,7 +93,7 @@ export function useLibrarySessionController({
 
       void analyze();
     },
-    [setActiveEditorSource],
+    [autoMatchThresholdPercent, setActiveEditorSource],
   );
 
   const clearLibrary = useCallback(() => {
@@ -186,40 +197,63 @@ export function useLibrarySessionController({
     setSelectedUnmatchedImageIds((current) => current.filter((entry) => entry !== imageId));
   }, []);
 
-  const addLibraryScreenshots = useCallback((files: File[]) => {
-    const append = async () => {
-      const currentSession = librarySessionRef.current;
-      if (!currentSession) return;
+  const addLibraryScreenshots = useCallback(
+    (files: File[]) => {
+      const append = async () => {
+        const currentSession = librarySessionRef.current;
+        if (!currentSession) return;
 
-      const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-      if (imageFiles.length === 0) return;
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
 
-      setLibraryError(null);
-      setIsAppendingScreenshots(true);
-      setAppendProgress({processed: 0, total: imageFiles.length});
+        setLibraryError(null);
+        setIsAppendingScreenshots(true);
+        setAppendProgress({processed: 0, total: imageFiles.length});
 
-      try {
-        const extracted = await extractFeatures(imageFiles, {
-          thumbnailSize: 96,
-          concurrency: 4,
-          onProgress: (processed, total) => setAppendProgress({processed, total}),
-        });
+        try {
+          const extracted = await extractFeatures(imageFiles, {
+            thumbnailSize: 96,
+            concurrency: 4,
+            onProgress: (processed, total) => setAppendProgress({processed, total}),
+          });
 
-        setLibrarySession((session) =>
-          session ? appendAndRecomputeSession(session, extracted, `app-${Date.now()}`) : session,
-        );
-        setSelectedUnmatchedImageIds([]);
-      } catch {
-        setLibraryError(
-          'Could not append screenshots right now. Your existing library is unchanged.',
-        );
-      } finally {
-        setIsAppendingScreenshots(false);
-        setAppendProgress(null);
-      }
-    };
+          setLibrarySession((session) =>
+            session
+              ? appendAndRecomputeSession(session, extracted, `app-${Date.now()}`, {
+                  autoPairThreshold: autoMatchThresholdPercent / 100,
+                })
+              : session,
+          );
+          setSelectedUnmatchedImageIds([]);
+        } catch {
+          setLibraryError(
+            'Could not append screenshots right now. Your existing library is unchanged.',
+          );
+        } finally {
+          setIsAppendingScreenshots(false);
+          setAppendProgress(null);
+        }
+      };
 
-    void append();
+      void append();
+    },
+    [autoMatchThresholdPercent],
+  );
+
+  const updateAutoMatchThresholdPercent = useCallback((nextPercent: number) => {
+    const clamped = Math.max(
+      MIN_AUTO_MATCH_THRESHOLD_PERCENT,
+      Math.min(MAX_AUTO_MATCH_THRESHOLD_PERCENT, Math.round(nextPercent)),
+    );
+    setAutoMatchThresholdPercent(clamped);
+    setLibrarySession((current) =>
+      current
+        ? recomputeSessionPairs(current, {
+            autoPairThreshold: clamped / 100,
+          })
+        : current,
+    );
+    setSelectedUnmatchedImageIds([]);
   }, []);
 
   const markExportedPairComplete = useCallback((source: EditorSource) => {
@@ -246,6 +280,7 @@ export function useLibrarySessionController({
     appendProgress,
     isAppendingScreenshots,
     libraryError,
+    autoMatchThresholdPercent,
     selectedUnmatchedImageIds,
     setLibraryError: setError,
     analyzeLibraryFiles,
@@ -261,6 +296,7 @@ export function useLibrarySessionController({
     deleteReviewImages,
     deleteUnmatchedImage,
     addLibraryScreenshots,
+    updateAutoMatchThresholdPercent,
     markExportedPairComplete,
   };
 }

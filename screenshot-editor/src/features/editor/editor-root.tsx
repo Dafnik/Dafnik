@@ -102,6 +102,8 @@ export function EditorRoot() {
           onAddScreenshots={library.addLibraryScreenshots}
           isAppendingScreenshots={library.isAppendingScreenshots}
           appendProgress={library.appendProgress}
+          autoMatchThresholdPercent={library.autoMatchThresholdPercent}
+          onAutoMatchThresholdPercentChange={library.updateAutoMatchThresholdPercent}
           errorMessage={library.libraryError}
           onDismissError={() => library.setLibraryError(null)}
           onClearLibrary={library.clearLibrary}
