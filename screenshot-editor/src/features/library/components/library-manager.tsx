@@ -4,6 +4,17 @@ import {Slider} from '@/components/ui/slider';
 import {LibraryPairCard} from '@/features/library/components/library-pair-card';
 import {ReviewQueue} from '@/features/library/components/review-queue';
 import type {LibraryImage, LibraryPair, LibrarySession} from '@/features/library/types';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FolderOpen,
+  ImageOff,
+  Link2,
+  Loader2,
+  Trash2,
+  Unlink2,
+  Upload,
+} from 'lucide-react';
 
 interface LibraryManagerProps {
   session: LibrarySession;
@@ -82,6 +93,7 @@ export function LibraryManager({
                 size="sm"
                 onClick={() => addScreenshotsInputRef.current?.click()}
                 disabled={isAppendingScreenshots}>
+                <Upload className="h-3.5 w-3.5" />
                 Add screenshots
               </Button>
               <input
@@ -98,26 +110,32 @@ export function LibraryManager({
                 }}
               />
               <Button variant="ghost" size="sm" onClick={onClearLibrary}>
+                <Trash2 className="h-3.5 w-3.5" />
                 Clear library
               </Button>
             </div>
           </div>
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="border-border bg-secondary/40 border px-2 py-1">
+              <span className="border-border bg-secondary/40 flex items-center gap-1.5 border px-2 py-1">
+                <Link2 className="h-3.5 w-3.5" />
                 Active: {activePairs.length}
               </span>
-              <span className="border-border bg-secondary/40 border px-2 py-1">
+              <span className="border-border bg-secondary/40 flex items-center gap-1.5 border px-2 py-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 Done: {donePairs.length}
               </span>
-              <span className="border-border bg-secondary/40 border px-2 py-1">
+              <span className="border-border bg-secondary/40 flex items-center gap-1.5 border px-2 py-1">
+                <AlertTriangle className="h-3.5 w-3.5" />
                 Review: {session.reviewPairs.length}
               </span>
-              <span className="border-border bg-secondary/40 border px-2 py-1">
+              <span className="border-border bg-secondary/40 flex items-center gap-1.5 border px-2 py-1">
+                <ImageOff className="h-3.5 w-3.5" />
                 Unmatched: {unmatchedImages.length}
               </span>
               {appendProgress ? (
-                <span className="border-border bg-secondary/40 border px-2 py-1">
+                <span className="border-border bg-secondary/40 flex items-center gap-1.5 border px-2 py-1">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   Adding screenshots: {appendProgress.processed}/{appendProgress.total}
                 </span>
               ) : null}
@@ -160,7 +178,10 @@ export function LibraryManager({
         ) : null}
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold tracking-wide uppercase">Active Pairs</h2>
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
+            <Link2 className="h-4 w-4" />
+            Active Pairs
+          </h2>
           {activePairs.length === 0 ? (
             <div className="border-border bg-card border-2 p-4">
               <p className="text-muted-foreground text-sm">No active pairs.</p>
@@ -175,10 +196,12 @@ export function LibraryManager({
                   actions={
                     <>
                       <Button size="sm" onClick={() => onOpenPair(pair)}>
+                        <FolderOpen className="h-3.5 w-3.5" />
                         Open pair
                       </Button>
                       {onUnpairPair ? (
                         <Button variant="outline" size="sm" onClick={() => onUnpairPair(pair.id)}>
+                          <Unlink2 className="h-3.5 w-3.5" />
                           Unpair
                         </Button>
                       ) : null}
@@ -186,6 +209,7 @@ export function LibraryManager({
                         variant="outline"
                         size="sm"
                         onClick={() => onDeletePairImages(pair.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
                         Delete images
                       </Button>
                     </>
@@ -197,7 +221,10 @@ export function LibraryManager({
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold tracking-wide uppercase">Needs Review</h2>
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
+            <AlertTriangle className="h-4 w-4" />
+            Needs Review
+          </h2>
           <ReviewQueue
             items={session.reviewPairs}
             onAccept={onAcceptReview}
@@ -209,12 +236,16 @@ export function LibraryManager({
 
         <section className="space-y-3 pb-8">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold tracking-wide uppercase">Unmatched</h2>
+            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
+              <ImageOff className="h-4 w-4" />
+              Unmatched
+            </h2>
             <Button
               size="sm"
               variant="secondary"
               onClick={onCreateManualPair}
               disabled={selectedUnmatchedImageIds.length !== 2}>
+              <Link2 className="h-3.5 w-3.5" />
               Create manual pair
             </Button>
           </div>
@@ -261,6 +292,7 @@ export function LibraryManager({
                         size="sm"
                         className="h-7 text-[11px]"
                         onClick={() => onDeleteUnmatchedImage(image.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
                         Delete image
                       </Button>
                     </div>
@@ -272,7 +304,10 @@ export function LibraryManager({
         </section>
 
         <section className="space-y-3 pb-8">
-          <h2 className="text-sm font-semibold tracking-wide uppercase">Done</h2>
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
+            <CheckCircle2 className="h-4 w-4" />
+            Done
+          </h2>
           {donePairs.length === 0 ? (
             <div className="border-border bg-card border-2 p-4">
               <p className="text-muted-foreground text-sm">No completed pairs yet.</p>
@@ -287,12 +322,14 @@ export function LibraryManager({
                   actions={
                     <>
                       <Button size="sm" onClick={() => onOpenPair(pair)}>
+                        <FolderOpen className="h-3.5 w-3.5" />
                         Open pair
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onDeletePairImages(pair.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
                         Delete images
                       </Button>
                     </>

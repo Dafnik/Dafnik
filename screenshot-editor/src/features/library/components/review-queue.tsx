@@ -1,6 +1,7 @@
 import {Button} from '@/components/ui/button';
 import {LibraryPairCard} from '@/features/library/components/library-pair-card';
 import type {LibraryPair, ReviewItem} from '@/features/library/types';
+import {Check, Eye, Trash2, X} from 'lucide-react';
 
 interface ReviewQueueProps {
   items: ReviewItem[];
@@ -35,15 +36,19 @@ export function ReviewQueue({
           actions={
             <>
               <Button size="sm" onClick={() => onAccept(item.id)}>
+                <Check className="h-3.5 w-3.5" />
                 Accept pair
               </Button>
               <Button variant="outline" size="sm" onClick={() => onReject(item.id)}>
+                <X className="h-3.5 w-3.5" />
                 Reject
               </Button>
               <Button variant="outline" size="sm" onClick={() => onDeleteImages(item.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
                 Delete images
               </Button>
               <Button variant="ghost" size="sm" onClick={() => onOpenPair(item.pair)}>
+                <Eye className="h-3.5 w-3.5" />
                 Open preview
               </Button>
             </>
