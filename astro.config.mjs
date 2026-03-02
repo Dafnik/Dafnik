@@ -1,9 +1,7 @@
 // @ts-check
 import {defineConfig} from 'astro/config';
-import {fileURLToPath} from 'node:url';
 
 import icon from 'astro-icon';
-import react from '@astrojs/react';
 
 import tailwindcss from '@tailwindcss/vite';
 
@@ -16,7 +14,6 @@ export default defineConfig({
   site: 'https://dafnik.me',
   integrations: [
     icon(),
-    react(),
     starlight({
       title: 'dafnik.me',
       logo: {
@@ -50,13 +47,5 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()],
-    resolve: {
-      alias: [
-        {
-          find: /^@\//,
-          replacement: fileURLToPath(new URL('./screenshot-editor/src/', import.meta.url)),
-        },
-      ],
-    },
   },
 });
