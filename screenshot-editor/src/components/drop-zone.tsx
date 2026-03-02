@@ -1,7 +1,7 @@
 import React from 'react';
 
 import {useCallback, useRef, useState} from 'react';
-import {Upload, ImageIcon} from 'lucide-react';
+import {Upload, ImageIcon, LibraryIcon} from 'lucide-react';
 import {useOpenUploadShortcut} from '@/features/editor/hooks/use-open-upload-shortcut';
 
 interface DropZoneProps {
@@ -94,6 +94,9 @@ export function DropZone({onImagesLoaded}: DropZoneProps) {
               <ImageIcon className="-ml-2.5 h-3.5 w-3.5" />2 images: split view
             </span>
           </div>
+          <span className="flex items-center gap-1.5 text-xs">
+            <LibraryIcon className="h-3.5 w-3.5" />3 or more: library / gallery
+          </span>
         </div>
         <input
           ref={fileInputRef}
