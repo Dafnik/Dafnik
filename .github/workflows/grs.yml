@@ -5,6 +5,9 @@ on:
     - cron: '0 3 1,16 * *' # At 03:00 on day-of-month 1 and 16.
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
