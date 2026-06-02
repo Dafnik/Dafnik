@@ -7,8 +7,6 @@ import tailwindcss from '@tailwindcss/vite';
 
 import starlight from '@astrojs/starlight';
 
-import starlightThemeNova from 'starlight-theme-nova';
-
 // https://astro.build/config
 export default defineConfig({
   site: 'https://dafnik.me',
@@ -19,7 +17,6 @@ export default defineConfig({
       logo: {
         src: './public/logo.png',
       },
-      plugins: [starlightThemeNova()],
       social: [
         {
           icon: 'github',
