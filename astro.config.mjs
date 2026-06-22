@@ -30,8 +30,8 @@ export default defineConfig({
         },
         {
           icon: 'mastodon',
-          label: 'voi.social',
-          href: 'https://voi.social/@Dafnik',
+          label: 'fedi.at',
+          href: 'https://fedi.at/@dafnik',
         },
         {
           icon: 'email',
