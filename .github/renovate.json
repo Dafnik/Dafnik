@@ -1,5 +1,5 @@
 {
-  "baseBranches": ["main"],
+  "baseBranchPatterns": ["main"],
   "enabledManagers": ["github-actions", "npm"],
   "semanticCommits": "enabled",
   "semanticCommitScope": "",
@@ -22,7 +22,7 @@
   "extends": [
     "config:recommended",
     ":pinVersions",
-    "npm:unpublishSafe",
+    "security:minimumReleaseAgeNpm",
     ":preserveSemverRanges",
     ":rebaseStalePrs"
   ]
