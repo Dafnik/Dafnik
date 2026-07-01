@@ -10,7 +10,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@astrojs/starlight": "0.40.0",
+    "@astrojs/starlight": "0.41.1",
     "@tailwindcss/vite": "4.3.1",
     "astro": "6.4.8",
     "astro-icon": "1.1.5",
@@ -20,7 +20,7 @@
   "devDependencies": {
     "@tailwindcss/typography": "0.5.20",
     "@types/node": "25.9.4",
-    "prettier": "3.8.4",
+    "prettier": "3.9.1",
     "prettier-plugin-astro": "0.14.1",
     "prettier-plugin-tailwindcss": "0.8.0"
   }
