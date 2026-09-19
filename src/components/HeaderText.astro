@@ -1,70 +1,28 @@
-<a href="/">
-  <span class="nameMiddle">Hi! I'm</span><br class="flex md:hidden" />
-  <span id="nameBig">Dominik</span><br class="flex md:hidden" /><span class="nameMiddle">
+<a href="/" class="block w-fit" aria-label="Back to the home page">
+  <span class="text-[clamp(2rem,6vw,3.5rem)] leading-none tracking-[-0.055em]">Hi! I'm</span>
+  <span
+    id="name-big"
+    class="mx-1 block text-[clamp(4.25rem,17vw,9rem)] leading-[0.82] tracking-[-0.09em] sm:inline">
+    Dominik
+  </span>
+  <span class="block text-[clamp(2rem,6vw,3.5rem)] leading-none tracking-[-0.055em] sm:inline">
     or you maybe know me as Dafnik.
   </span>
 </a>
 
-<style>
-  @reference "../styles/global.css";
-  /* latin-ext */
-  @font-face {
-    font-family: 'Space Grotesk';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src:
-      local('Space Grotesk'),
-      url('./fonts/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7aUXsqPMBTTA.woff2') format('woff2');
-    unicode-range:
-      U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F,
-      U+A720-A7FF;
-  }
-
-  /* latin */
-  @font-face {
-    font-family: 'Space Grotesk';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src:
-      local('Space Grotesk'),
-      url('./fonts/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7aUXskPMA.woff2') format('woff2');
-    unicode-range:
-      U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074,
-      U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-  }
-
-  /*noinspection ALL*/
-  .rainbow-text {
-    background: linear-gradient(to right, red, orange, yellow, green, cyan, blue, violet);
-    color: transparent;
-    background-clip: text;
-    /* Fuck you chrome! https://caniuse.com/?search=background-clip%3A%20webkit */
-    -webkit-background-clip: text;
-  }
-
-  #nameBig {
-    @apply mx-1 text-8xl;
-
-    font-family: 'Space Grotesk', sans-serif;
-  }
-
-  .nameMiddle {
-    @apply text-5xl;
-    font-family: 'Space Grotesk', sans-serif;
-  }
-</style>
-
 <script>
   document.addEventListener('astro:page-load', () => {
-    const nameBig = document?.getElementById('nameBig');
+    const nameBig = document?.getElementById('name-big');
+    const rainbowClasses = [
+      'bg-[linear-gradient(to_right,red,orange,yellow,green,cyan,blue,violet)]',
+      'bg-clip-text',
+      'text-transparent',
+    ];
 
     if (nameBig) {
-      console.log('run');
-      nameBig.classList.remove('rainbow-text');
+      nameBig.classList.remove(...rainbowClasses);
       if (new Date().getMonth() === 5) {
-        nameBig.classList.add('rainbow-text');
+        nameBig.classList.add(...rainbowClasses);
       } else {
         const colors = [
           '#AED581',
@@ -84,7 +42,9 @@
           '#FF3D00',
           '#18FFFF',
         ];
-        nameBig.style.color = colors[Math.floor(Math.random() * colors.length)];
+        const accent = colors[Math.floor(Math.random() * colors.length)];
+        nameBig.style.color = accent;
+        document.documentElement.style.setProperty('--accent', accent);
       }
     }
   });

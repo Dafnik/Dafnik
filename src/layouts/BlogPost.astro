@@ -1,27 +1,60 @@
 ---
-import BaseLayout from './BaseLayout.astro';
-import type {CollectionEntry} from 'astro:content';
 import {format} from 'date-fns';
 
-import '../styles/global.css';
+import BaseLayout from './BaseLayout.astro';
 
-type Props = CollectionEntry<'blog'>['data'];
-
-const {title, pubDate} = Astro.props;
+const {title, description, pubDate, image} = Astro.props;
 ---
 
-<BaseLayout>
-  <div class="flex flex-col gap-8">
-    <a href="/blog" class="text-2xl text-gray-300">Dafnik's Blog</a>
-    <div class="flex flex-col gap-2">
-      <h1 class="jetbrains-mono text-3xl">{title}</h1>
-      <div class="text-gray-300">{format(pubDate, 'dd. MMMM yyyy')}</div>
-    </div>
+<BaseLayout
+  title={`${title} · Dafnik's Blog`}
+  description={description ?? `A post by Dafnik: ${title}`}
+  image={image ? `/thumbnails/${image.url}` : undefined}>
+  <main class="mx-auto flex max-w-4xl flex-col">
+    <a
+      class="w-fit font-mono text-sm text-[var(--muted)] transition-colors hover:text-[var(--accent)]"
+      href="/blog">
+      ← all posts
+    </a>
 
-    <div
-      class="prose dark:prose-invert prose-headings:underline prose-h1:text-xl prose-h1:font-bold prose-p:text-justify prose-a:text-blue-600 prose-img:rounded-xl"
-      style="max-width: unset">
+    <header class="mt-10 border-b border-[var(--line)] pb-10 sm:mt-14 sm:pb-14">
+      <h1
+        class="mt-5 max-w-4xl text-[clamp(2.75rem,8vw,5.75rem)] leading-[0.94] tracking-[-0.075em]">
+        {title}
+      </h1>
+      {
+        description && (
+          <p class="mt-7 max-w-2xl text-xl leading-relaxed text-[#d4d4d0] sm:text-2xl">
+            {description}
+          </p>
+        )
+      }
+      <time
+        class="mt-8 block font-mono text-xs tracking-[0.08em] text-[var(--muted)] uppercase"
+        datetime={pubDate.toISOString()}>
+        {format(pubDate, 'dd MMMM yyyy')}
+      </time>
+    </header>
+
+    {
+      image && (
+        <figure class="mt-10 overflow-hidden border border-[var(--line)] sm:mt-14">
+          <img class="block h-auto w-full" src={`/thumbnails/${image.url}`} alt={image.alt} />
+        </figure>
+      )
+    }
+
+    <article
+      class="prose prose-invert prose-headings:scroll-mt-8 prose-h2:mt-16 prose-h2:text-3xl prose-h2:leading-tight prose-h2:tracking-[-0.045em] prose-h2:text-[var(--paper)] prose-h3:mt-12 prose-h3:text-2xl prose-h3:leading-tight prose-h3:tracking-[-0.035em] prose-h3:text-[var(--paper)] prose-p:mt-6 prose-li:my-3 prose-a:text-[var(--accent)] prose-a:decoration-[rgb(64_196_255_/_0.45)] prose-a:decoration-1 prose-a:underline-offset-3 hover:prose-a:decoration-current prose-code:rounded-sm prose-code:bg-white/10 prose-code:px-1 prose-code:py-0.5 prose-code:font-mono prose-code:text-[0.85em] prose-code:text-[var(--paper)] prose-pre:mt-6 prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:rounded-none prose-pre:border prose-pre:border-[var(--line)] prose-pre:bg-[#0b0b0b] prose-pre:p-4 prose-pre:text-sm prose-pre:leading-6 prose-pre:font-mono prose-blockquote:mt-6 prose-blockquote:border-s-2 prose-blockquote:border-[var(--accent)] prose-blockquote:ps-5 prose-blockquote:italic prose-blockquote:text-[#c9c9c4] prose-img:mt-10 prose-img:max-w-full prose-img:border prose-img:border-[var(--line)] sm:prose-h2:text-4xl sm:prose-pre:p-6 mt-12 max-w-[72ch] text-[1.05rem] leading-8 text-[#deded9] sm:mt-16 sm:text-lg sm:leading-9">
       <slot />
-    </div>
-  </div>
+    </article>
+
+    <footer class="mt-20 border-t border-[var(--line)] pt-8">
+      <a
+        class="w-fit font-mono text-sm text-[var(--muted)] transition-colors hover:text-[var(--accent)]"
+        href="/blog">
+        ← back to the blog
+      </a>
+    </footer>
+  </main>
 </BaseLayout>

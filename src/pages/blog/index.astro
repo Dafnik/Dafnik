@@ -1,42 +1,62 @@
 ---
-import HeaderText from '../../components/HeaderText.astro';
-import BaseLayout from '../../layouts/BaseLayout.astro';
 import {getCollection} from 'astro:content';
 import {format} from 'date-fns';
+
+import HeaderText from '../../components/HeaderText.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const posts = (await getCollection('blog')).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
 ---
 
-<BaseLayout>
-  <div class="flex flex-col gap-16">
-    <HeaderText />
+<BaseLayout title="Blog · Dafnik" description="Technical notes and writing by Dafnik.">
+  <main class="flex flex-col gap-10 sm:gap-14">
+    <header class="flex flex-col gap-14">
+      <HeaderText />
+    </header>
 
-    <div class="flex flex-col gap-4">
-      <h1 class="text-3xl">Blog posts</h1>
+    <section class="border-t border-[var(--line)]" aria-labelledby="post-list-title">
+      <div class="flex items-baseline justify-between border-b border-[var(--line)] py-5">
+        <h2 id="post-list-title" class="text-2xl tracking-[-0.04em]">Posts</h2>
+        <span class="font-mono text-xs text-[var(--muted)]">
+          {posts.length.toString().padStart(2, '0')} total
+        </span>
+      </div>
 
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div>
         {
-          posts.map((post) => (
-            <a href={'/blog/' + post.id} class="rounded-md border border-white">
-              {post.data.image && (
-                <img
-                  style="max-height: 20rem"
-                  src={'/thumbnails/' + post.data.image.url}
-                  alt={post.data.image.alt}
-                />
-              )}
-              <div class="flex flex-col gap-2 p-4">
-                <h2 class="text-xl">{post.data.title}</h2>
-                {post.data.description && <span class="">{post.data.description}</span>}
-
-                <div class="text-gray-300">on {format(post.data.pubDate, 'yyyy.MM.dd')}</div>
+          posts.map((post, index) => (
+            <a
+              class="grid grid-cols-[2.5rem_1fr_auto] gap-x-3 border-b border-[var(--line)] py-7 transition-colors hover:text-[var(--accent)] sm:grid-cols-[4.5rem_1fr_auto_2rem] sm:items-center sm:gap-x-6"
+              href={`/blog/${post.id}`}>
+              <span class="font-mono text-xs text-[var(--muted)]">
+                {(index + 1).toString().padStart(2, '0')}
+              </span>
+              <div>
+                <h3 class="text-xl leading-tight tracking-[-0.035em] sm:text-2xl">
+                  {post.data.title}
+                </h3>
+                {post.data.description && (
+                  <p class="mt-2 max-w-2xl text-sm leading-6 text-[#bcbcb7] sm:text-base">
+                    {post.data.description}
+                  </p>
+                )}
               </div>
+              <time
+                class="col-start-2 mt-3 font-mono text-xs text-[var(--muted)] sm:col-auto sm:mt-0"
+                datetime={post.data.pubDate.toISOString()}>
+                {format(post.data.pubDate, 'yyyy.MM.dd')}
+              </time>
+              <span
+                class="col-start-3 row-start-1 text-xl sm:col-auto sm:row-auto"
+                aria-hidden="true">
+                ↗
+              </span>
             </a>
           ))
         }
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </BaseLayout>

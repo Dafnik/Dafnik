@@ -1,2 +1,65 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+@theme {
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Space Grotesk', sans-serif;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7aUXskPMA.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/tDbV2o-flEEny0FZhsfKu5WU4xD7OwE.woff2') format('woff2');
+}
+
+:root {
+  --paper: #f5f5f2;
+  --muted: #a3a3a3;
+  --line: rgb(255 255 255 / 0.18);
+  --accent: #40c4ff;
+}
+
+html {
+  background: #050505;
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 50% -35rem, rgb(255 255 255 / 0.07), transparent 42rem), #050505;
+  color: var(--paper);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--accent);
+  color: #050505;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,253 +1,100 @@
 ---
 import {Icon} from 'astro-icon/components';
 
-import '../styles/jetbrains-mono.css';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import HeaderText from '../components/HeaderText.astro';
+
+const socialLinks = [
+  {label: 'github', href: 'https://github.com/Dafnik', icon: 'social/github'},
+  {label: 'blog', href: '/blog', icon: 'blog', internal: true},
+  {label: 'mastodon', href: 'https://fedi.at/@dafnik', icon: 'social/mastodon'},
+  {label: 'email', href: 'mailto:contact+AT+dafnik.me', icon: 'social/email'},
+  {label: 'gitlab', href: 'https://gitlab.com/Dafnik', icon: 'social/gitlab'},
+  {label: 'imprint', href: '/imprint', icon: 'social/imprint', internal: true},
+];
+
+const projectGroups = [
+  {
+    title: '> project',
+    items: [
+      {label: 'kellner.team', href: 'https://kellner.team'},
+      {label: 'poweruptime', href: 'https://poweruptime.org'},
+      {label: 'DatePoll', href: 'https://datepollsystems.org/projects/datepoll'},
+    ],
+  },
+  {
+    title: '< projects',
+    items: [
+      {label: 'dfx-qrcode', href: 'https://npmx.dev/package/dfx-qrcode'},
+      {label: 'dfx-openapi', href: 'https://npmx.dev/package/dfx-openapi'},
+      {label: 'dfx-theme', href: 'https://npmx.dev/package/dfx-theme'},
+      {label: 'dfx-transloco-markup', href: 'https://npmx.dev/package/dfx-transloco-markup'},
+      {label: 'dfx-opa', href: 'https://npmx.dev/package/dfx-opa'},
+      {label: 'dfx-bootstrap-table', href: 'https://npmx.dev/package/dfx-bootstrap-table'},
+      {label: 'year progress bot', href: 'https://fedi.at/@year_progress'},
+    ],
+  },
+  {
+    title: 'other stuff',
+    items: [
+      {label: 'screenshot editor', href: 'https://screenshot-editor.dafnik.me'},
+      {label: 'meta', href: '/meta', internal: true},
+      {label: 'status monitor', href: 'https://status.dafnik.me'},
+      {label: 'releases.datepoll.org', href: 'https://releases.datepoll.org'},
+    ],
+  },
+];
 ---
 
 <BaseLayout>
-  <div class="flex flex-col gap-16">
-    <HeaderText />
+  <main class="flex flex-col gap-10 sm:gap-14">
+    <header class="flex flex-col gap-7">
+      <HeaderText />
+    </header>
 
-    <div class="flex flex-col gap-4">
-      <h2 class="text-3xl font-bold">socials</h2>
-
-      <div class="jetbrains-mono flex flex-wrap items-center gap-4">
-        <a
-          class="header-link link-hover"
-          rel="noopener"
-          href="https://github.com/Dafnik"
-          target="_blank">
-          github <Icon name="social/github" />
-        </a>
-
-        <span>/</span>
-        <a class="header-link link-hover" href="blog">
-          blog <Icon name="blog" />
-        </a>
-
-        <span>/</span>
-        <a
-          class="header-link link-hover"
-          rel="me noopener"
-          href="https://fedi.at/@dafnik"
-          target="_blank">
-          mastodon <Icon name="social/mastodon" />
-        </a>
-
-        <span>/</span>
-        <a
-          class="header-link link-hover"
-          rel="noopener"
-          href="mailto:contact+AT+dafnik.me"
-          target="_blank">
-          email <Icon name="social/email" />
-        </a>
-
-        <span>/</span>
-
-        <a
-          class="header-link link-hover"
-          rel="noopener"
-          href="https://gitlab.com/Dafnik"
-          target="_blank">
-          gitlab <Icon name="social/gitlab" />
-        </a>
-
-        <span>/</span>
-
-        <a class="header-link link-hover" rel="noopener" href="./imprint" target="_blank">
-          imprint <Icon name="social/imprint" />
-        </a>
+    <nav
+      class="grid gap-5 border-y border-[var(--line)] py-6 sm:grid-cols-[10rem_1fr] sm:items-start"
+      aria-label="Elsewhere on the web">
+      <span class="font-mono text-[0.8rem] tracking-[0.04em] text-[var(--muted)]">// find me</span>
+      <div class="flex flex-wrap gap-x-6 gap-y-4">
+        {
+          socialLinks.map((link) => (
+            <a
+              class="relative inline-flex items-center gap-2 font-mono text-sm text-[var(--paper)] after:pointer-events-none after:absolute after:bottom-[-4px] after:left-1/2 after:h-0 after:w-[calc(100%+12px)] after:-translate-x-1/2 after:bg-white after:mix-blend-exclusion after:transition-all after:duration-[180ms] after:ease-[cubic-bezier(0.445,0.05,0.55,0.95)] after:will-change-[height] hover:after:h-[calc(100%+8px)]"
+              href={link.href}
+              target={link.internal ? undefined : '_blank'}
+              rel={
+                link.internal ? undefined : link.label === 'mastodon' ? 'me noopener' : 'noopener'
+              }>
+              <span>{link.label}</span>
+              <Icon class="size-4" name={link.icon} aria-hidden="true" />
+            </a>
+          ))
+        }
       </div>
-    </div>
+    </nav>
 
-    <div class="grid grid-cols-1 gap-16 md:grid-cols-2">
-      <div>
-        <h2 class="text-3xl font-bold">> project</h2>
-
-        <ol class="jetbrains-mono">
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://kellner.team">
-              kellner.team
-            </a>
-          </li>
-          <li>
-            <a
-              class="list-link link-hover"
-              target="_blank"
-              rel="noopener"
-              href="https://poweruptime.org">
-              poweruptime
-            </a>
-          </li>
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://datepollsystems.org/projects/datepoll">
-              DatePoll
-            </a>
-          </li>
-        </ol>
-      </div>
-
-      <div>
-        <h2 class="text-3xl font-bold">< projects</h2>
-
-        <ol class="jetbrains-mono">
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://npmx.dev/package/dfx-qrcode">
-              dfx-qrcode
-            </a>
-          </li>
-
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://npmx.dev/package/dfx-openapi">
-              dfx-openapi
-            </a>
-          </li>
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://npmx.dev/package/dfx-theme">
-              dfx-theme
-            </a>
-          </li>
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://npmx.dev/package/dfx-transloco-markup">
-              dfx-transloco-markup
-            </a>
-          </li>
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://npmx.dev/package/dfx-opa">
-              dfx-opa
-            </a>
-          </li>
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://npmx.dev/package/dfx-bootstrap-table">
-              dfx-bootstrap-table
-            </a>
-          </li>
-
-          <li>
-            <a
-              class="list-link link-hover"
-              rel="noopener"
-              target="_blank"
-              href="https://fedi.at/@year_progress">
-              year progress bot
-            </a>
-          </li>
-        </ol>
-      </div>
-
-      <div>
-        <h2 class="text-3xl font-bold">other stuff</h2>
-
-        <ol class="jetbrains-mono">
-          <li>
-            <a
-              class="list-link link-hover"
-              target="_blank"
-              rel="noopener"
-              href="https://screenshot-editor.dafnik.me">
-              screenshot editor
-            </a>
-          </li>
-          <li>
-            <a class="list-link link-hover" target="_blank" rel="noopener" href="/meta">meta</a>
-          </li>
-          <li>
-            <a
-              class="list-link link-hover"
-              target="_blank"
-              rel="noopener"
-              href="https://status.dafnik.me">
-              status monitor
-            </a>
-          </li>
-          <li>
-            <a
-              class="link-hover list-link"
-              rel="noopener"
-              target="_blank"
-              href="https://releases.datepoll.org">
-              releases.datepoll.org
-            </a>
-          </li>
-        </ol>
-      </div>
-    </div>
-  </div>
+    <section class="grid gap-x-16 gap-y-14 md:grid-cols-2" aria-label="Projects and links">
+      {
+        projectGroups.map((group, index) => (
+          <section class="pt-5">
+            <h2 class="text-2xl tracking-[-0.04em] sm:text-3xl">{group.title}</h2>
+            <ol class="ms-8 mt-7 [list-style-type:cjk-ideographic] space-y-2.5 font-mono">
+              {group.items.map((item) => (
+                <li>
+                  <a
+                    class="relative inline-block max-w-full text-base break-words text-[var(--paper)] after:pointer-events-none after:absolute after:bottom-[-4px] after:left-1/2 after:h-0 after:w-[calc(100%+12px)] after:-translate-x-1/2 after:bg-white after:mix-blend-exclusion after:transition-all after:duration-[180ms] after:ease-[cubic-bezier(0.445,0.05,0.55,0.95)] after:will-change-[height] hover:after:h-[calc(100%+8px)]"
+                    href={item.href}
+                    target={item.internal ? undefined : '_blank'}
+                    rel={item.internal ? undefined : 'noopener'}>
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ))
+      }
+    </section>
+  </main>
 </BaseLayout>
-
-<style>
-  @reference "../styles/global.css";
-  .list-link {
-    @apply relative block text-nowrap break-keep whitespace-nowrap;
-    width: 90%;
-  }
-
-  .header-link {
-    @apply relative inline-flex items-center gap-2 pe-3;
-  }
-
-  .link-hover::after {
-    content: '';
-    background: white;
-    mix-blend-mode: exclusion;
-    width: calc(100% + 10px);
-    height: 0;
-    position: absolute;
-    bottom: -4px;
-    left: -10px;
-    transition: all 0.18s cubic-bezier(0.445, 0.05, 0.55, 0.95);
-  }
-
-  .link-hover:hover::after {
-    height: calc(100% + 8px);
-  }
-
-  ol {
-    @apply ms-10;
-
-    list-style-type: cjk-ideographic;
-  }
-
-  li {
-    @apply mt-8;
-  }
-
-  body {
-    @apply text-2xl;
-  }
-</style>
